@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MiniSteam.Data;
 
@@ -11,9 +12,11 @@ using MiniSteam.Data;
 namespace MiniSteam.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20260816120814_AddGenres")]
+    partial class AddGenres
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -38,9 +41,6 @@ namespace MiniSteam.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("GenreId")
-                        .HasColumnType("int");
-
                     b.Property<string>("ImageUrl")
                         .HasColumnType("nvarchar(max)");
 
@@ -63,8 +63,6 @@ namespace MiniSteam.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("GenreId");
-
                     b.ToTable("Games");
                 });
 
@@ -83,20 +81,6 @@ namespace MiniSteam.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Genres");
-                });
-
-            modelBuilder.Entity("MiniSteam.Models.Entities.Game", b =>
-                {
-                    b.HasOne("MiniSteam.Models.Entities.Genre", "Genre")
-                        .WithMany("Games")
-                        .HasForeignKey("GenreId");
-
-                    b.Navigation("Genre");
-                });
-
-            modelBuilder.Entity("MiniSteam.Models.Entities.Genre", b =>
-                {
-                    b.Navigation("Games");
                 });
 #pragma warning restore 612, 618
         }

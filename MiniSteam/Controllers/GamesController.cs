@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using MiniSteam.Data;
 using MiniSteam.Models.Entities;
@@ -31,6 +31,8 @@ namespace MiniSteam.Controllers
         // Метод Create возвращает представление для создания новой игры. Он используется для отображения формы, где пользователь может ввести данные новой игры.
         public IActionResult Create()
         {
+            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name");
+
             return View();
         }
 
@@ -43,11 +45,14 @@ namespace MiniSteam.Controllers
             {
                 return NotFound();
             }
+
             var game = await _context.Games.FirstOrDefaultAsync(g => g.Id == id);
+
             if (game == null)
             {
                 return NotFound();
             }
+
             return View(game);
         }
 
@@ -83,6 +88,8 @@ namespace MiniSteam.Controllers
             {
                 return NotFound();
             }
+
+            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name", game.GenreId);
 
             return View(game);
         }

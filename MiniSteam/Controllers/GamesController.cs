@@ -21,10 +21,34 @@ namespace MiniSteam.Controllers
 
 
         // GET: Games
-        // Метод Index возвращает представление со списком всех игр, отсортированных по имени. Он использует LINQ для сортировки игр и передает их в представление.
+        // Метод Index возвращает представление со списком всех игр, упорядоченных по имени. Он использует контекст базы данных для получения данных о играх и их жанрах.
         public IActionResult Index()
         {
-            return View(_context.Games.OrderBy(g => g.Name));
+            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name");
+
+            return View(_context.Games.Include(game => game.Genre).OrderBy(game => game.Name));
+        }
+
+        // GET: Games/Search
+        // Метод Search возвращает представление со списком игр, которые соответствуют заданной строке поиска.
+        // Он фильтрует игры по имени и упорядочивает их по имени.
+        public IActionResult Search(string searchString, int? genreId)
+        {
+            var games = _context.Games.Include(game => game.Genre).AsQueryable();
+
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                games = games.Where(game => game.Name.Contains(searchString) || (game.Genre != null && game.Genre.Name.Contains(searchString)));
+            }
+
+            if (genreId.HasValue)
+            {
+                games = games.Where(game => game.GenreId == genreId.Value);
+            }
+
+            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name", genreId);
+
+            return View("Index", games.OrderBy(game => game.Name).ToList());
         }
 
         // GET Games/Create
@@ -46,7 +70,7 @@ namespace MiniSteam.Controllers
                 return NotFound();
             }
 
-            var game = await _context.Games.FirstOrDefaultAsync(g => g.Id == id);
+            var game = await _context.Games.Include(game => game.Genre).FirstOrDefaultAsync(g => g.Id == id);
 
             if (game == null)
             {
@@ -57,8 +81,7 @@ namespace MiniSteam.Controllers
         }
 
         // POST: Games/Create
-        // Метод Create обрабатывает POST-запрос для создания новой игры. Он проверяет, является ли модель допустимой, добавляет новую игру в контекст базы данных и сохраняет изменения.
-        // Если модель недействительна, возвращается представление с ошибками.
+        // Метод Create обрабатывает POST-запрос для создания новой игры. Он проверяет, является ли модель допустимой, добавляет игру в контекст базы данных и сохраняет изменения.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Game game)
@@ -69,6 +92,8 @@ namespace MiniSteam.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
+
+            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name", game.GenreId);
 
             return View(game);
         }
@@ -96,7 +121,7 @@ namespace MiniSteam.Controllers
 
         // POST: Games/Edit/5
         // Метод Edit обрабатывает POST-запрос для обновления существующей игры.
-        // Он проверяет, является ли модель допустимой, и если игра с указанным ID существует, обновляет ее в контексте базы данных и сохраняет изменения.
+        // Он проверяет, является ли модель допустимой, обновляет игру в контексте базы данных и сохраняет изменения.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(Game game)
@@ -110,9 +135,10 @@ namespace MiniSteam.Controllers
 
                 _context.Games.Update(game);
                 await _context.SaveChangesAsync();
-
                 return RedirectToAction(nameof(Index));
             }
+
+            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name", game.GenreId);
 
             return View(game);
         }

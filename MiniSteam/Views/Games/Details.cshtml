@@ -53,6 +53,12 @@
             @Html.DisplayFor(model => model.ImageUrl)
         </dd>
         <dt class="col-sm-2">
+            Genre
+        </dt>
+        <dd class="col-sm-10">
+            @Model.Genre?.Name
+        </dd>
+        <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.IsPublic)
         </dt>
         <dd class="col-sm-10">

@@ -29,3 +29,83 @@ body {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
+
+/* MiniSteam Store Search */
+
+.steam-search-bar {
+    background: linear-gradient(90deg, #2a475e 0%, #1b2838 100%);
+    padding: 10px 12px;
+    margin-bottom: 24px;
+    border-radius: 2px;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+}
+
+.steam-search-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.steam-genre-select {
+    height: 34px;
+    min-width: 180px;
+    padding: 0 10px;
+
+    color: #d6d7d8;
+    background-color: #316282;
+
+    border: 1px solid #0e1c25;
+    border-radius: 2px;
+}
+
+.steam-search-box {
+    display: flex;
+    width: 320px;
+    height: 34px;
+
+    background-color: #316282;
+    border: 1px solid #0e1c25;
+    border-radius: 2px;
+}
+
+.steam-search-box input {
+    flex: 1;
+    min-width: 0;
+
+    padding: 5px 10px;
+
+    color: white;
+    background: transparent;
+
+    border: none;
+    outline: none;
+}
+
+.steam-search-box input::placeholder {
+    color: #b8c6d1;
+    font-style: italic;
+}
+
+.steam-search-box button {
+    width: 38px;
+
+    color: white;
+    background-color: #67c1f5;
+
+    border: none;
+    cursor: pointer;
+}
+
+.steam-search-box button:hover {
+    background-color: #7fd2ff;
+}
+
+.steam-clear {
+    color: #c7d5e0;
+    text-decoration: none;
+    padding: 5px 8px;
+}
+
+.steam-clear:hover {
+    color: white;
+}

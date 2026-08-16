@@ -6,7 +6,7 @@
         public int Id { get; set; }
 
         // Свойство Name представляет название жанра. Оно используется для отображения и идентификации жанра в приложении.
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         // Свойство Games представляет коллекцию игр, связанных с этим жанром. Оно используется для навигации между жанрами и играми в приложении.
         public ICollection<Game> Games { get; set; } = new List<Game>();

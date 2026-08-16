@@ -8,10 +8,10 @@ namespace MiniSteam.Models.Entities
         public int Id { get; set; }
 
         // Название игры, которое будет отображаться пользователям.
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         // Краткое описание игры, которое поможет пользователям понять, о чем игра.
-        public string Description { get; set; }
+        public string? Description { get; set; }
 
         // Цена игры в Долларах. Должна быть положительным числом.
         [Column(TypeName = "decimal(18,2)")]
@@ -21,10 +21,10 @@ namespace MiniSteam.Models.Entities
         public DateTime ReleaseDate { get; set; }
 
         // Разработчик игры. Это может быть студия или индивидуальный разработчик.
-        public string Developer { get; set; }
+        public string? Developer { get; set; }
 
         // Издатель игры. Это компания, которая распространяет игру.
-        public string Publisher { get; set; }
+        public string? Publisher { get; set; }
 
         // URL изображения игры. Это может быть обложка или скриншот игры.
         public string? ImageUrl { get; set; }

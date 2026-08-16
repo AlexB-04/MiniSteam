@@ -1,7 +1,7 @@
 @model IEnumerable<MiniSteam.Models.Entities.Game>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Games";
 }
 
 <h1>Games</h1>
@@ -12,20 +12,32 @@
     </a>
 </p>
 
-<form asp-action="Search" method="get" class="row g-2 mb-4">
-    <div class="col-md-4">
-        <input type="text" name="searchString" class="form-control" placeholder="Search games..." />
-    </div>
+<div class="steam-search-bar">
+    <form asp-action="Search" method="get" class="steam-search-form">
 
-    <div class="col-md-3">
-        <select name="genreId" class="form-select" asp-items="ViewBag.GenreId"> <option value="">All Genres</option> </select>
-    </div>
+        <select name="genreId"
+                class="steam-genre-select"
+                asp-items="ViewBag.GenreId">
+            <option value="">All Genres</option>
+        </select>
 
-    <div class="col-auto"> 
-        <button type="submit" class="btn btn-primary"> Search </button>
-        <a asp-action="Index" class="btn btn-secondary"> Clear </a>
-    </div>
-</form>
+        <div class="steam-search-box">
+            <input type="text"
+                   name="searchString"
+                   value="@Context.Request.Query["searchString"]"
+                   placeholder="search the store" />
+
+            <button type="submit" title="Search">
+                🔍
+            </button>
+        </div>
+
+        <a asp-action="Index" class="steam-clear">
+            Clear
+        </a>
+
+    </form>
+</div>
 
 <table class="table">
     <thead>
@@ -56,6 +68,9 @@
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.IsPublic)
+            </th>
+            <th>
+                Actions
             </th>
         </tr>
     </thead>
@@ -101,12 +116,11 @@
                 @Html.DisplayFor(model => item.IsPublic)
             </td>
             <td>
-                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-warning">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-danger">Delete</a>
+                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-warning btn-sm">Edit</a>
+                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">Details</a>
+                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-danger btn-sm">Delete</a>
             </td>
         </tr>
 }
     </tbody>
 </table>
-

@@ -1,41 +1,40 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MiniSteam.Models.Entities
 {
     public class Game
     {
-        // Каждый ID индивидуален и уникален для каждой игры в базе данных.
         public int Id { get; set; }
 
-        // Название игры, которое будет отображаться пользователям.
-        public string? Name { get; set; }
+        [Required(ErrorMessage = "Game name is required.")]
+        [StringLength(100)]
+        public string Name { get; set; } = string.Empty;
 
-        // Краткое описание игры, которое поможет пользователям понять, о чем игра.
+        [StringLength(2000)]
         public string? Description { get; set; }
 
-        // Цена игры в Долларах. Должна быть положительным числом.
         [Column(TypeName = "decimal(18,2)")]
+        [Range(typeof(decimal), "0", "9999.99",
+            ErrorMessage = "Price must be between 0 and 9999.99.")]
         public decimal Price { get; set; }
 
-        // Дата выпуска игры. Должна быть в формате "yyyy-MM-dd".
+        [DataType(DataType.Date)]
         public DateTime ReleaseDate { get; set; }
 
-        // Разработчик игры. Это может быть студия или индивидуальный разработчик.
-        public string? Developer { get; set; }
+        [Required(ErrorMessage = "Developer is required.")]
+        [StringLength(100)]
+        public string Developer { get; set; } = string.Empty;
 
-        // Издатель игры. Это компания, которая распространяет игру.
+        [StringLength(100)]
         public string? Publisher { get; set; }
 
-        // URL изображения игры. Это может быть обложка или скриншот игры.
         public string? ImageUrl { get; set; }
 
-        // Флаг, указывающий, является ли игра публичной или нет. Если игра публичная, она доступна для всех пользователей.
         public bool IsPublic { get; set; }
 
-        // Внешний ключ для жанра игры. Это связывает игру с определенным жанром в базе данных.
         public int? GenreId { get; set; }
 
-        // Навигационное свойство для жанра игры. Это позволяет легко получать информацию о жанре, к которому принадлежит игра.
         public Genre? Genre { get; set; }
     }
 }

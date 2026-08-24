@@ -15,26 +15,13 @@
 <div class="steam-search-bar">
     <form asp-action="Search" method="get" class="steam-search-form">
 
-        <select name="genreId"
-                class="steam-genre-select"
-                asp-items="ViewBag.GenreId">
-            <option value="">All Genres</option>
-        </select>
+        <select name="genreId" class="steam-genre-select" asp-items="ViewBag.GenreId"> <option value="">All Genres</option></select>
 
-        <div class="steam-search-box">
-            <input type="text"
-                   name="searchString"
-                   value="@Context.Request.Query["searchString"]"
-                   placeholder="search the store" />
-
-            <button type="submit" title="Search">
-                🔍
-            </button>
+        <div class="steam-search-box"> <input type="text" name="searchString" value="@Context.Request.Query["searchString"]" placeholder="search the store" />
+            <button type="submit" title="Search">🔍</button>
         </div>
 
-        <a asp-action="Index" class="steam-clear">
-            Clear
-        </a>
+        <a asp-action="Index" class="steam-clear"> Clear </a>
 
     </form>
 </div>

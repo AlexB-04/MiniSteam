@@ -1,4 +1,5 @@
-﻿namespace MiniSteam.Models.Entities
+﻿using System.ComponentModel.DataAnnotations;
+namespace MiniSteam.Models.Entities
 {
     public class Genre
     {
@@ -6,7 +7,9 @@
         public int Id { get; set; }
 
         // Свойство Name представляет название жанра. Оно используется для отображения и идентификации жанра в приложении.
-        public string? Name { get; set; }
+        [Required(ErrorMessage = "Genre name is required.")]
+        [StringLength(50)]
+        public string Name { get; set; } = string.Empty;
 
         // Свойство Games представляет коллекцию игр, связанных с этим жанром. Оно используется для навигации между жанрами и играми в приложении.
         public ICollection<Game> Games { get; set; } = new List<Game>();

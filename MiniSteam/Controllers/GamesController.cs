@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using MiniSteam.Data;
 using MiniSteam.Models.Entities;
+using MiniSteam.Models.ViewModels;
 
 namespace MiniSteam.Controllers
 {
@@ -11,12 +12,14 @@ namespace MiniSteam.Controllers
         // Контроллер GamesController, который управляет действиями, связанными с играми в приложении MiniSteam.
         // Он наследуется от базового класса Controller, предоставляемого ASP.NET Core MVC.
         private readonly DataContext _context;
+        private readonly IWebHostEnvironment _webHostEnvironment;
 
         // Конструктор класса GamesController, который принимает экземпляр DataContext и сохраняет его в приватное поле _context.
         // Это позволяет контроллеру взаимодействовать с базой данных через контекст.
-        public GamesController(DataContext context) 
+        public GamesController(DataContext context, IWebHostEnvironment webHostEnvironment) 
         {
             _context = context;
+            _webHostEnvironment = webHostEnvironment;
         }
 
 
@@ -84,18 +87,50 @@ namespace MiniSteam.Controllers
         // Метод Create обрабатывает POST-запрос для создания новой игры. Он проверяет, является ли модель допустимой, добавляет игру в контекст базы данных и сохраняет изменения.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Game game)
+        public async Task<IActionResult> Create(GameViewModel model)
         {
             if (ModelState.IsValid)
             {
+                string? imageUrl = null;
+
+                if (model.ImageFile != null && model.ImageFile.Length > 0)
+                {
+                    var extension = Path.GetExtension(model.ImageFile.FileName);
+                    var fileName = $"{Guid.NewGuid()}{extension}";
+
+                    var folderPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", "games");
+
+                    var filePath = Path.Combine(folderPath, fileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await model.ImageFile.CopyToAsync(stream);
+                    }
+
+                    imageUrl = $"/images/games/{fileName}";
+                }
+
+                var game = new Game
+                {
+                    Name = model.Name,
+                    Description = model.Description,
+                    Price = model.Price,
+                    ReleaseDate = model.ReleaseDate,
+                    Developer = model.Developer,
+                    Publisher = model.Publisher,
+                    IsPublic = model.IsPublic,
+                    GenreId = model.GenreId,
+                    ImageUrl = imageUrl
+                };
+
                 _context.Games.Add(game);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name", game.GenreId);
+            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name", model.GenreId);
 
-            return View(game);
+            return View(model);
         }
 
         // Edit: Games/Edit/5
@@ -114,9 +149,23 @@ namespace MiniSteam.Controllers
                 return NotFound();
             }
 
+            var model = new GameViewModel
+            {
+                Id = game.Id,
+                Name = game.Name,
+                Description = game.Description,
+                Price = game.Price,
+                ReleaseDate = game.ReleaseDate,
+                Developer = game.Developer,
+                Publisher = game.Publisher,
+                IsPublic = game.IsPublic,
+                GenreId = game.GenreId,
+                ExistingImageUrl = game.ImageUrl
+            };
+
             ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name", game.GenreId);
 
-            return View(game);
+            return View(model);
         }
 
         // POST: Games/Edit/5
@@ -124,23 +173,73 @@ namespace MiniSteam.Controllers
         // Он проверяет, является ли модель допустимой, обновляет игру в контексте базы данных и сохраняет изменения.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Game game)
+        public async Task<IActionResult> Edit(int id, GameViewModel model)
         {
+            if (id != model.Id)
+            {
+                return NotFound();
+            }
+
             if (ModelState.IsValid)
             {
-                if (!await _context.Games.AnyAsync(g => g.Id == game.Id))
+                var game = await _context.Games.FindAsync(id);
+
+                if (game == null)
                 {
                     return NotFound();
                 }
 
-                _context.Games.Update(game);
+                game.Name = model.Name;
+                game.Description = model.Description;
+                game.Price = model.Price;
+                game.ReleaseDate = model.ReleaseDate;
+                game.Developer = model.Developer;
+                game.Publisher = model.Publisher;
+                game.IsPublic = model.IsPublic;
+                game.GenreId = model.GenreId;
+
+                if (model.ImageFile != null && model.ImageFile.Length > 0)
+                {
+                    // Запоминаем старую картинку ДО изменения ImageUrl
+                    var oldImageUrl = game.ImageUrl;
+
+                    var extension = Path.GetExtension(model.ImageFile.FileName);
+                    var fileName = $"{Guid.NewGuid()}{extension}";
+
+                    var folderPath = Path.Combine(_webHostEnvironment.WebRootPath,"images","games");
+
+                    var filePath = Path.Combine(folderPath, fileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await model.ImageFile.CopyToAsync(stream);
+                    }
+
+                    // Новая картинка успешно сохранилась.
+                    // Теперь можно удалить старую.
+                    if (!string.IsNullOrEmpty(oldImageUrl))
+                    {
+                        var oldFileName = Path.GetFileName(oldImageUrl);
+
+                        var oldFilePath = Path.Combine(_webHostEnvironment.WebRootPath,"images","games",oldFileName);
+
+                        if (System.IO.File.Exists(oldFilePath))
+                        {
+                            System.IO.File.Delete(oldFilePath);
+                        }
+                    }
+
+                    game.ImageUrl = $"/images/games/{fileName}";
+                }
+
                 await _context.SaveChangesAsync();
+
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name", game.GenreId);
+            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name", model.GenreId);
 
-            return View(game);
+            return View(model);
         }
 
         // GET: Games/Delete/5

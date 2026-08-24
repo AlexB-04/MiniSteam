@@ -32,6 +32,28 @@ namespace MiniSteam.Controllers
             return View(_context.Games.Include(game => game.Genre).OrderBy(game => game.Name));
         }
 
+        // GET: Games/Store
+        public IActionResult Store(string? searchString, int? genreId)
+        {
+            var games = _context.Games
+                .Include(game => game.Genre)
+                .Where(game => game.IsPublic);
+
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                games = games.Where(game => game.Name.Contains(searchString) || (game.Genre != null && game.Genre.Name.Contains(searchString)));
+            }
+
+            if (genreId.HasValue)
+            {
+                games = games.Where(game => game.GenreId == genreId.Value);
+            }
+
+            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name", genreId);
+
+            return View(games.OrderBy(game => game.Name).ToList());
+        }
+
         // GET: Games/Search
         // Метод Search возвращает представление со списком игр, которые соответствуют заданной строке поиска.
         // Он фильтрует игры по имени и упорядочивает их по имени.
@@ -276,8 +298,29 @@ namespace MiniSteam.Controllers
                 return NotFound();
             }
 
+            // Запоминаем путь картинки до удаления игры
+            var imageUrl = game.ImageUrl;
+
             _context.Games.Remove(game);
             await _context.SaveChangesAsync();
+
+            // Если у игры была загруженная локальная картинка — удаляем файл
+            if (!string.IsNullOrEmpty(imageUrl) &&
+                imageUrl.StartsWith("/images/games/"))
+            {
+                var fileName = Path.GetFileName(imageUrl);
+
+                var filePath = Path.Combine(
+                    _webHostEnvironment.WebRootPath,
+                    "images",
+                    "games",
+                    fileName);
+
+                if (System.IO.File.Exists(filePath))
+                {
+                    System.IO.File.Delete(filePath);
+                }
+            }
 
             return RedirectToAction(nameof(Index));
         }

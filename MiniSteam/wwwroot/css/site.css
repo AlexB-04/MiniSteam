@@ -109,3 +109,104 @@ body {
 .steam-clear:hover {
     color: white;
 }
+
+/* MiniSteam Store Search */
+
+.steam-search-bar {
+    background: linear-gradient(90deg, #2a475e 0%, #1b2838 100%);
+    padding: 8px 10px;
+    margin-bottom: 24px;
+    border-radius: 2px;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+}
+
+.steam-search-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.steam-genre-select {
+    width: 180px;
+    height: 32px;
+    padding: 0 8px;
+    font-size: 14px;
+    color: #d6d7d8;
+    background-color: #316282;
+    border: 1px solid #0e1c25;
+    border-radius: 2px;
+}
+
+.steam-search-box {
+    display: flex;
+    width: 340px;
+    height: 32px;
+    background-color: #316282;
+    border: 1px solid #0e1c25;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+    .steam-search-box input {
+        flex: 1;
+        min-width: 0;
+        padding: 4px 9px;
+        font-size: 14px;
+        color: white;
+        background: transparent;
+        border: none;
+        outline: none;
+    }
+
+        .steam-search-box input::placeholder {
+            color: #c7d5e0;
+            font-style: italic;
+        }
+
+.steam-search-button {
+    width: 36px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    background-color: #1a9fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+    .steam-search-button:hover {
+        background-color: #54b8ff;
+    }
+
+.steam-search-icon {
+    display: block;
+    position: relative;
+    width: 12px;
+    height: 12px;
+    border: 3px solid white;
+    border-radius: 50%;
+}
+
+    .steam-search-icon::after {
+        content: "";
+        position: absolute;
+        width: 7px;
+        height: 3px;
+        right: -6px;
+        bottom: -3px;
+        background: white;
+        border-radius: 2px;
+        transform: rotate(45deg);
+    }
+
+.steam-clear {
+    padding: 4px 8px;
+    font-size: 14px;
+    color: #c7d5e0;
+    text-decoration: none;
+}
+
+    .steam-clear:hover {
+        color: white;
+    }

@@ -88,15 +88,11 @@
                 <td>
                     @if (!string.IsNullOrEmpty(item.ImageUrl))
                     {
-                        <img src="@item.ImageUrl"
-                             alt="@item.Name"
-                             style="width: 120px; height: 70px; object-fit: cover;" />
+                        <img src="@item.ImageUrl" alt="@item.Name" style="width: 120px; height: 70px; object-fit: contain;" />
                     }
                     else
                     {
-                        <img src="/images/noimage.jpg"
-                             alt="No image"
-                             style="width: 120px; height: 70px; object-fit: cover;" />
+                        <img src="/images/noimage.jpg" alt="No image" style="width: 120px; height: 70px; object-fit: contain;" />
                     }
                 </td>
             <td>

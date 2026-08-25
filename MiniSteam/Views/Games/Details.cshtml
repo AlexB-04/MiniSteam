@@ -5,7 +5,14 @@
 }
 
 <div class="game-details-page">
-    <a asp-action="Store" class="game-details-back">← Back to Store</a>
+    @if (ViewBag.From == "games")
+    {
+        <a asp-action="Index" class="game-details-back">← Back to Games</a>
+    }
+    else
+    {
+        <a asp-action="Store" class="game-details-back">← Back to Store</a>
+    }
 
     <h1 class="game-details-title">@Model.Name</h1>
 

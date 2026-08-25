@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Identity;
+using MiniSteam.Models.Entities;
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using MiniSteam.Data;
@@ -15,6 +17,8 @@ namespace MiniSteam
             // Создаём контекст базы данных и настраиваем его для использования SQL Server с использованием строки подключения из конфигурации.
             builder.Services.AddDbContext<DataContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            builder.Services.AddIdentity<User, IdentityRole>().AddEntityFrameworkStores<DataContext>().AddDefaultTokenProviders();
 
             var app = builder.Build();
 
@@ -35,6 +39,7 @@ namespace MiniSteam
             app.UseHttpsRedirection();
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapStaticAssets();

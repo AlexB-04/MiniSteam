@@ -31,7 +31,7 @@
     {
         @foreach (var game in Model)
         {
-            <a asp-action="Details" asp-route-id="@game.Id" class="store-game-row">
+            <a asp-action="Details" asp-route-id="@game.Id" asp-route-from="store" class="store-game-row">
                 <div class="store-game-image">
                     @if (!string.IsNullOrEmpty(game.ImageUrl))
                     {

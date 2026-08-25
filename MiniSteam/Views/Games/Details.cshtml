@@ -1,86 +1,63 @@
 @model MiniSteam.Models.Entities.Game
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = Model.Name;
 }
 
-<h1>Details</h1>
+<div class="game-details-page">
+    <a asp-action="Store" class="game-details-back">← Back to Store</a>
 
-<div>
-    <h4>Game</h4>
-    <hr />
+    <h1 class="game-details-title">@Model.Name</h1>
 
-    <div class="mb-4">
-        @if (!string.IsNullOrEmpty(Model.ImageUrl))
+    <div class="game-details-main">
+        <div class="game-details-image">
+            @if (!string.IsNullOrEmpty(Model.ImageUrl))
+            {
+                <img src="@Model.ImageUrl" alt="@Model.Name" />
+            }
+            else
+            {
+                <img src="/images/noimage.jpg" alt="No image" />
+            }
+        </div>
+
+        <div class="game-details-info">
+            <div class="game-details-property">
+                <span class="game-details-label">Genre</span>
+                <span>@(Model.Genre?.Name ?? "Unknown")</span>
+            </div>
+
+            <div class="game-details-property">
+                <span class="game-details-label">Developer</span>
+                <span>@Model.Developer</span>
+            </div>
+
+            <div class="game-details-property">
+                <span class="game-details-label">Publisher</span>
+                <span>@(Model.Publisher ?? "Unknown")</span>
+            </div>
+
+            <div class="game-details-property">
+                <span class="game-details-label">Release Date</span>
+                <span>@Model.ReleaseDate.ToString("dd MMM yyyy")</span>
+            </div>
+
+            <div class="game-details-price">
+                @Model.Price.ToString("0.00") €
+            </div>
+        </div>
+    </div>
+
+    <div class="game-details-description">
+        <h2>About This Game</h2>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Description))
         {
-            <img src="@Model.ImageUrl" alt="@Model.Name" style="width: 420px; max-width: 100%; height: auto;" />
+            <p>@Model.Description</p>
         }
         else
         {
-            <img src="/images/noimage.jpg" alt="No image" style="width: 420px; max-width: 100%; height: auto;" />
+            <p>No description available.</p>
         }
     </div>
-
-    <dl class="row">
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Name)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Name)
-        </dd>
-
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Description)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Description)
-        </dd>
-
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Price)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Price)
-        </dd>
-
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.ReleaseDate)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.ReleaseDate)
-        </dd>
-
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Developer)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Developer)
-        </dd>
-
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Publisher)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Publisher)
-        </dd>
-
-        <dt class="col-sm-2">
-            Genre
-        </dt>
-        <dd class="col-sm-10">
-            @Model.Genre?.Name
-        </dd>
-
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.IsPublic)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.IsPublic)
-        </dd>
-    </dl>
-</div>
-
-<div>
-    <a asp-action="Edit" asp-route-id="@Model.Id">Edit</a> |
-    <a asp-action="Store">Back to Store</a>
 </div>

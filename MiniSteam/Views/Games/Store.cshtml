@@ -19,24 +19,39 @@
     </form>
 </div>
 
-<div>
-    @foreach (var game in Model)
+<div class="store-results">
+    @if (!Model.Any())
     {
-        <div class="mb-4">
-            @if (!string.IsNullOrEmpty(game.ImageUrl))
-            {
-                <img src="@game.ImageUrl" alt="@game.Name" style="width: 180px; height: 100px; object-fit: contain;" />
-            }
-            else
-            {
-                <img src="/images/noimage.jpg" alt="No image" style="width: 180px; height: 100px; object-fit: contain;" />
-            }
-
-            <h4>@game.Name</h4>
-            <p>Genre: @game.Genre?.Name</p>
-            <p>Price: @game.Price €</p>
-
-            <a asp-action="Details" asp-route-id="@game.Id" class="btn btn-primary">View Game</a>
+        <div class="store-no-results">
+            <h4>No games found</h4>
+            <p>Try another search or genre.</p>
         </div>
+    }
+    else
+    {
+        @foreach (var game in Model)
+        {
+            <a asp-action="Details" asp-route-id="@game.Id" class="store-game-row">
+                <div class="store-game-image">
+                    @if (!string.IsNullOrEmpty(game.ImageUrl))
+                    {
+                        <img src="@game.ImageUrl" alt="@game.Name" />
+                    }
+                    else
+                    {
+                        <img src="/images/noimage.jpg" alt="No image" />
+                    }
+                </div>
+
+                <div class="store-game-info">
+                    <h4>@game.Name</h4>
+                    <span>@game.Genre?.Name</span>
+                </div>
+
+                <div class="store-game-price">
+                    @game.Price.ToString("0.00") €
+                </div>
+            </a>
+        }
     }
 </div>

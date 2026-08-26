@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using MiniSteam.Data;
@@ -25,7 +26,8 @@ namespace MiniSteam.Controllers
 
         // GET: Games
         // Метод Index возвращает представление со списком всех игр, упорядоченных по имени. Он использует контекст базы данных для получения данных о играх и их жанрах.
-        public IActionResult Index()
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Index()
         {
             ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name");
 
@@ -57,6 +59,7 @@ namespace MiniSteam.Controllers
         // GET: Games/Search
         // Метод Search возвращает представление со списком игр, которые соответствуют заданной строке поиска.
         // Он фильтрует игры по имени и упорядочивает их по имени.
+        [Authorize(Roles = "Admin")]
         public IActionResult Search(string searchString, int? genreId)
         {
             var games = _context.Games.Include(game => game.Genre).AsQueryable();
@@ -78,6 +81,7 @@ namespace MiniSteam.Controllers
 
         // GET Games/Create
         // Метод Create возвращает представление для создания новой игры. Он используется для отображения формы, где пользователь может ввести данные новой игры.
+        [Authorize(Roles = "Admin")]
         public IActionResult Create()
         {
             ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name");
@@ -88,6 +92,7 @@ namespace MiniSteam.Controllers
         // GET: Games/Details/5
         // Метод Details возвращает представление с подробной информацией о конкретной игре, идентифицируемой по ее ID.
         // Если ID не указан или игра с таким ID не найдена, возвращается ошибка NotFound.
+        
         public async Task<IActionResult> Details(int? id, string? from)
         {
             if (id == null)
@@ -110,6 +115,7 @@ namespace MiniSteam.Controllers
         // Метод Create обрабатывает POST-запрос для создания новой игры. Он проверяет, является ли модель допустимой, добавляет игру в контекст базы данных и сохраняет изменения.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create(GameViewModel model)
         {
             if (ModelState.IsValid)
@@ -158,6 +164,7 @@ namespace MiniSteam.Controllers
 
         // Edit: Games/Edit/5
         // Метод Edit возвращает представление для редактирования существующей игры, идентифицируемой по ее ID. Если ID не указан или игра с таким ID не найдена, возвращается ошибка NotFound.
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -196,6 +203,7 @@ namespace MiniSteam.Controllers
         // Он проверяет, является ли модель допустимой, обновляет игру в контексте базы данных и сохраняет изменения.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(int id, GameViewModel model)
         {
             if (id != model.Id)
@@ -268,6 +276,7 @@ namespace MiniSteam.Controllers
         // GET: Games/Delete/5
         // Метод Delete возвращает представление для подтверждения удаления игры, идентифицируемой по ее ID.
         // Если ID не указан или игра с таким ID не найдена, возвращается ошибка NotFound.
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -290,6 +299,7 @@ namespace MiniSteam.Controllers
         // Если игра не найдена, возвращается ошибка NotFound.
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var game = await _context.Games.FindAsync(id);

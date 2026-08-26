@@ -7,7 +7,7 @@ namespace MiniSteam
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +20,15 @@ namespace MiniSteam
 
             builder.Services.AddIdentity<User, IdentityRole>().AddEntityFrameworkStores<DataContext>().AddDefaultTokenProviders();
 
+            builder.Services.AddTransient<SeedDb>();
+
             var app = builder.Build();
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var seedDb = scope.ServiceProvider.GetRequiredService<SeedDb>();
+                await seedDb.SeedAsync();
+            }
 
             // Валюта США и форматирование чисел и дат в соответствии с американскими стандартами.
             var cultureInfo = new CultureInfo("en-US");
@@ -45,7 +53,7 @@ namespace MiniSteam
             app.MapStaticAssets();
             app.MapControllerRoute(
                 name: "default",
-                pattern: "{controller=Games}/{action=Index}/{id?}")
+                pattern: "{controller=Games}/{action=Store}/{id?}")
                 .WithStaticAssets();
 
             app.Run();

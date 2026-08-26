@@ -28,6 +28,12 @@ namespace MiniSteam.Controllers
             return View();
         }
 
+        // GET: Account/AccessDenied
+        public IActionResult AccessDenied()
+        {
+            return View();
+        }
+
         // POST: Account/Register
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -45,8 +51,9 @@ namespace MiniSteam.Controllers
 
                 if (result.Succeeded)
                 {
+                    await _userManager.AddToRoleAsync(user, "User");
                     await _signInManager.SignInAsync(user, isPersistent: false);
-
+                    
                     return RedirectToAction("Store", "Games");
                 }
 

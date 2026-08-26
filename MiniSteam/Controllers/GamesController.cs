@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -15,12 +16,18 @@ namespace MiniSteam.Controllers
         private readonly DataContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
+        private readonly UserManager<User> _userManager;
+
         // Конструктор класса GamesController, который принимает экземпляр DataContext и сохраняет его в приватное поле _context.
         // Это позволяет контроллеру взаимодействовать с базой данных через контекст.
-        public GamesController(DataContext context, IWebHostEnvironment webHostEnvironment) 
+        public GamesController(
+    DataContext context,
+    IWebHostEnvironment webHostEnvironment,
+    UserManager<User> userManager)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
+            _userManager = userManager;
         }
 
 
@@ -113,7 +120,23 @@ namespace MiniSteam.Controllers
                 return NotFound();
             }
 
+            ViewBag.IsInLibrary = false;
+
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                var user = await _userManager.GetUserAsync(User);
+
+                if (user != null)
+                {
+                    ViewBag.IsInLibrary = await _context.LibraryGames
+                        .AnyAsync(libraryGame =>
+                            libraryGame.UserId == user.Id &&
+                            libraryGame.GameId == game.Id);
+                }
+            }
+
             ViewBag.From = from;
+
             return View(game);
         }
 

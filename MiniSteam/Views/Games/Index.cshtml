@@ -4,13 +4,14 @@
     ViewData["Title"] = "Games";
 }
 
-<h1>Games</h1>
+<div class="admin-games-header">
+    <div>
+        <h1>Game Management</h1>
+        <p>@Model.Count() games</p>
+    </div>
 
-<p>
-    <a asp-action="Create" class="btn btn-success">
-        Create New
-    </a>
-</p>
+    <a asp-action="Create" class="admin-create-button">Add Game</a>
+</div>
 
 <div class="steam-search-bar">
     <form asp-action="Search" method="get" class="steam-search-form">
@@ -26,84 +27,56 @@
     </form>
 </div>
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Name)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Description)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Price)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.ReleaseDate)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Developer)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Publisher)
-            </th>
-            <th>
-                Genre
-            </th>
-            <th>
-                Image
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.IsPublic)
-            </th>
-            <th>
-                Actions
-            </th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(model => item.Name)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.Description)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.Price)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.ReleaseDate)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.Developer)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.Publisher)
-            </td>
-            <td>
-                @item.Genre?.Name
-            </td>
-                <td>
+@if (!Model.Any())
+{
+    <div class="admin-games-empty">
+        <p>No games found.</p>
+    </div>
+}
+else
+{
+    <div class="admin-games-list">
+        @foreach (var item in Model)
+        {
+            <div class="admin-game-row">
+                <div class="admin-game-image">
                     @if (!string.IsNullOrEmpty(item.ImageUrl))
                     {
-                        <img src="@item.ImageUrl" alt="@item.Name" style="width: 120px; height: 70px; object-fit: contain;" />
+                        <img src="@item.ImageUrl" alt="@item.Name" />
                     }
                     else
                     {
-                        <img src="/images/noimage.jpg" alt="No image" style="width: 120px; height: 70px; object-fit: contain;" />
+                        <img src="/images/noimage.jpg" alt="No image" />
                     }
-                </td>
-            <td>
-                @Html.DisplayFor(model => item.IsPublic)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-warning btn-sm">Edit</a>
-                    <a asp-action="Details" asp-route-id="@item.Id" asp-route-from="games" class="btn btn-info btn-sm">Details</a>
-                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-danger btn-sm">Delete</a>
-            </td>
-        </tr>
+                </div>
+
+                <div class="admin-game-info">
+                    <h2>@item.Name</h2>
+
+                    <div class="admin-game-meta">
+                        <span>@(item.Genre?.Name ?? "No Genre")</span>
+                        <span>@item.Developer</span>
+                        <span>@item.Price.ToString("0.00") €</span>
+                    </div>
+
+                    <div class="admin-game-status">
+                        @if (item.IsPublic)
+                        {
+                            <span class="game-public">Public</span>
+                        }
+                        else
+                        {
+                            <span class="game-hidden">Hidden</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="admin-game-actions">
+                    <a asp-action="Edit" asp-route-id="@item.Id" class="admin-edit-button">Edit</a>
+                    <a asp-action="Details" asp-route-id="@item.Id" asp-route-from="games" class="admin-details-button">Details</a>
+                    <a asp-action="Delete" asp-route-id="@item.Id" class="admin-delete-button">Delete</a>
+                </div>
+            </div>
+        }
+    </div>
 }
-    </tbody>
-</table>

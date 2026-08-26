@@ -1,0 +1,59 @@
+﻿@model IEnumerable<MiniSteam.Models.Entities.LibraryGame>
+
+@{
+    ViewData["Title"] = "My Library";
+}
+
+<div class="library-page">
+    <div class="library-header">
+        <div>
+            <h1>My Library</h1>
+            <p>@Model.Count() games in your library</p>
+        </div>
+
+        <a asp-controller="Games" asp-action="Store" class="library-store-button">Store</a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="library-empty">
+            <h2>Your library is empty</h2>
+            <p>Games that you add will appear here.</p>
+            <a asp-controller="Games" asp-action="Store" class="library-store-button">Browse Store</a>
+        </div>
+    }
+    else
+    {
+        <div class="library-games">
+            @foreach (var item in Model)
+            {
+                <div class="library-game-row">
+                    <a asp-controller="Games" asp-action="Details" asp-route-id="@item.GameId" asp-route-from="library" class="library-game-link">
+                        <div class="library-game-image">
+                            @if (!string.IsNullOrEmpty(item.Game.ImageUrl))
+                            {
+                                <img src="@item.Game.ImageUrl" alt="@item.Game.Name" />
+                            }
+                            else
+                            {
+                                <img src="~/images/noimage.jpg" alt="No image" />
+                            }
+                        </div>
+
+                        <div class="library-game-info">
+                            <h2>@item.Game.Name</h2>
+                            <span>@item.Game.Developer</span>
+                            <small>Added @item.AddedAt.ToString("dd MMM yyyy")</small>
+                        </div>
+                    </a>
+
+                    <div class="library-game-actions">
+                        <form asp-controller="Library" asp-action="RemoveFromLibrary" asp-route-gameId="@item.GameId" method="post">
+                            <button type="submit" class="library-remove-button">Remove</button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

@@ -9,6 +9,10 @@
     {
         <a asp-action="Index" class="game-details-back">← Back to Games</a>
     }
+    else if (ViewBag.From == "library")
+    {
+        <a asp-controller="Library" asp-action="Index" class="game-details-back">← Back to Library</a>
+    }
     else
     {
         <a asp-action="Store" class="game-details-back">← Back to Store</a>
@@ -52,6 +56,19 @@
             <div class="game-details-price">
                 @Model.Price.ToString("0.00") €
             </div>
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                if (ViewBag.IsInLibrary == true)
+                {
+                    <button type="button" class="btn btn-secondary" disabled>Already in Library</button>
+                }
+                else
+                {
+                    <form asp-controller="Library" asp-action="AddToLibrary" asp-route-gameId="@Model.Id" method="post">
+                        <button type="submit" class="btn btn-primary">Add to Library</button>
+                    </form>
+                }
+            }
         </div>
     </div>
 

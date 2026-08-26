@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MiniSteam.Data;
 using MiniSteam.Models.Entities;
 
 namespace MiniSteam.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class GenresController : Controller
     {
         // Контроллер GenresController, который управляет действиями, связанными с жанрами в приложении MiniSteam.

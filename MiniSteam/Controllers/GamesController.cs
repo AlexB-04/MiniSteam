@@ -92,7 +92,6 @@ namespace MiniSteam.Controllers
         // GET: Games/Details/5
         // Метод Details возвращает представление с подробной информацией о конкретной игре, идентифицируемой по ее ID.
         // Если ID не указан или игра с таким ID не найдена, возвращается ошибка NotFound.
-        
         public async Task<IActionResult> Details(int? id, string? from)
         {
             if (id == null)
@@ -100,7 +99,14 @@ namespace MiniSteam.Controllers
                 return NotFound();
             }
 
-            var game = await _context.Games.Include(game => game.Genre).FirstOrDefaultAsync(g => g.Id == id);
+            var games = _context.Games.Include(game => game.Genre).AsQueryable();
+
+            if (!User.IsInRole("Admin"))
+            {
+                games = games.Where(game => game.IsPublic);
+            }
+
+            var game = await games.FirstOrDefaultAsync(game => game.Id == id);
 
             if (game == null)
             {

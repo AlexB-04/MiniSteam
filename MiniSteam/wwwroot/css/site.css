@@ -590,3 +590,55 @@ body {
     color: #8f98a0;
     text-align: center;
 }
+
+/* Purchase History */
+
+.purchase-history-page {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding-bottom: 40px;
+}
+
+.purchase-history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.purchase-card {
+    margin-bottom: 12px;
+    background: #16202d;
+    color: #c7d5e0;
+    border: 1px solid #2a475e;
+}
+
+.purchase-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: #1b2838;
+}
+
+    .purchase-card-header span {
+        margin-left: 14px;
+        color: #8f98a0;
+        font-size: 13px;
+    }
+
+.purchase-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 13px 18px;
+    border-top: 1px solid #2a475e;
+}
+
+    .purchase-item a {
+        color: #66c0f4;
+        text-decoration: none;
+    }
+
+        .purchase-item a:hover {
+            color: #ffffff;
+        }

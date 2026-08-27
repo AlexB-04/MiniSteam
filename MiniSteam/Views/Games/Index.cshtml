@@ -4,6 +4,13 @@
     ViewData["Title"] = "Games";
 }
 
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["ErrorMessage"]
+    </div>
+}
+
 <div class="admin-games-header">
     <div>
         <h1>Game Management</h1>

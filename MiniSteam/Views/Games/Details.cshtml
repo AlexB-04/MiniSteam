@@ -64,8 +64,8 @@
                 }
                 else
                 {
-                    <form asp-controller="Library" asp-action="AddToLibrary" asp-route-gameId="@Model.Id" method="post">
-                        <button type="submit" class="btn btn-primary">Add to Library</button>
+                    <form asp-controller="Purchase" asp-action="Buy" asp-route-gameId="@Model.Id" method="post">
+                        <button type="submit" class="btn btn-primary">Buy for @Model.Price.ToString("0.00") €</button>
                     </form>
                 }
             }

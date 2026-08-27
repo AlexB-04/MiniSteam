@@ -1,0 +1,46 @@
+﻿@model IEnumerable<MiniSteam.Models.Entities.Purchase>
+
+@{
+    ViewData["Title"] = "Purchase History";
+}
+
+<div class="purchase-history-page">
+    <div class="purchase-history-header">
+        <h1>Purchase History</h1>
+        <a asp-controller="Games" asp-action="Store" class="btn btn-secondary">Back to Store</a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <p>You have not purchased any games yet.</p>
+    }
+    else
+    {
+        @foreach (var purchase in Model)
+        {
+            <div class="purchase-card">
+                <div class="purchase-card-header">
+                    <div>
+                        <strong>Purchase #@purchase.Id</strong>
+                        <span>@purchase.PurchasedAt.ToString("dd MMM yyyy HH:mm")</span>
+                    </div>
+
+                    <strong>@purchase.TotalPrice.ToString("0.00") €</strong>
+                </div>
+
+                @foreach (var item in purchase.PurchaseItems)
+                {
+                    <div class="purchase-item">
+                        <div>
+                            <a asp-controller="Games" asp-action="Details" asp-route-id="@item.GameId">@item.Game.Name</a>
+                        </div>
+
+                        <div>
+                            @item.Price.ToString("0.00") €
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>

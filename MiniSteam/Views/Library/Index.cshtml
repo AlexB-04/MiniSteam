@@ -46,12 +46,6 @@
                             <small>Added @item.AddedAt.ToString("dd MMM yyyy")</small>
                         </div>
                     </a>
-
-                    <div class="library-game-actions">
-                        <form asp-controller="Library" asp-action="RemoveFromLibrary" asp-route-gameId="@item.GameId" method="post">
-                            <button type="submit" class="library-remove-button">Remove</button>
-                        </form>
-                    </div>
                 </div>
             }
         </div>

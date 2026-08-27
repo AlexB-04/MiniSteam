@@ -16,6 +16,10 @@ namespace MiniSteam.Data
 
         public DbSet<LibraryGame> LibraryGames { get; set; }
 
+        public DbSet<Purchase> Purchases { get; set; }
+
+        public DbSet<PurchaseItem> PurchaseItems { get; set; }
+
         // Конструктор класса DataContext, который принимает параметры конфигурации DbContextOptions и передает их базовому классу DbContext.
         // Это позволяет настроить контекст базы данных, например, указать строку подключения к базе данных.
         public DataContext(DbContextOptions<DataContext> options) : base(options)
@@ -28,6 +32,20 @@ namespace MiniSteam.Data
             modelBuilder.Entity<LibraryGame>()
                 .HasIndex(libraryGame => new { libraryGame.UserId, libraryGame.GameId })
                 .IsUnique();
+
+            modelBuilder.Entity<Purchase>()
+                .Property(purchase => purchase.TotalPrice)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<PurchaseItem>()
+                .Property(purchaseItem => purchaseItem.Price)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<PurchaseItem>()
+                .HasOne(purchaseItem => purchaseItem.Game)
+                .WithMany()
+                .HasForeignKey(purchaseItem  => purchaseItem.GameId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

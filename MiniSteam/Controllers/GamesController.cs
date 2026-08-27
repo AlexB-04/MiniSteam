@@ -342,7 +342,17 @@ namespace MiniSteam.Controllers
             var imageUrl = game.ImageUrl;
 
             _context.Games.Remove(game);
-            await _context.SaveChangesAsync();
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                TempData["ErrorMessage"] = "This game cannot be deleted because it has purchase history.";
+
+                return RedirectToAction(nameof(Index));
+            }
 
             // Если у игры была загруженная локальная картинка — удаляем файл
             if (!string.IsNullOrEmpty(imageUrl) &&

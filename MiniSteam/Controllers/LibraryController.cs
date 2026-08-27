@@ -41,6 +41,7 @@ namespace MiniSteam.Controllers
         // POST: Library/AddToLibrary
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddToLibrary(int? gameId)
         {
             if (gameId == null)
@@ -92,6 +93,7 @@ namespace MiniSteam.Controllers
         // POST: Library/RemoveFromLibrary
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RemoveFromLibrary(int gameId)
         {
             var user = await _userManager.GetUserAsync(User);

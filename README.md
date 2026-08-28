@@ -277,3 +277,7 @@ Image Upload
 ```
 
 The current development phase focuses on final cleanup, testing, interface consistency and project documentation.
+
+## Status
+
+MiniSteam v1 is complete.

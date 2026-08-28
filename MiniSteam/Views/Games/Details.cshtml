@@ -101,4 +101,59 @@
             <p>No description available.</p>
         }
     </div>
+
+    <div class="game-reviews">
+        <div class="game-reviews-header">
+            <h2>User Reviews (@ViewBag.ReviewCount)</h2>
+
+            @if (ViewBag.CanReview == true)
+            {
+                <a asp-controller="Review" asp-action="Create" asp-route-gameId="@Model.Id" class="btn btn-primary">Write a Review</a>
+            }
+        </div>
+
+        @if (ViewBag.Reviews == null || !((IEnumerable<MiniSteam.Models.Entities.Review>)ViewBag.Reviews).Any())
+        {
+            <p class="game-reviews-empty">No reviews yet.</p>
+        }
+        else
+        {
+            @foreach (var review in (IEnumerable<MiniSteam.Models.Entities.Review>)ViewBag.Reviews)
+            {
+                <div class="review-card">
+                    <div class="review-card-header">
+                        @if (review.IsRecommended)
+                        {
+                            <span class="review-recommended">Recommended</span>
+                        }
+                        else
+                        {
+                            <span class="review-not-recommended">Not Recommended</span>
+                        }
+
+                        <span class="review-user">@review.User.UserName</span>
+                    </div>
+
+                    <p class="review-content">@review.Content</p>
+
+                    <div class="review-date">
+                        @review.CreatedAt.ToString("dd MMM yyyy HH:mm")
+
+                        @if (review.UpdatedAt != null)
+                        {
+                            <span> · Edited @review.UpdatedAt.Value.ToString("dd MMM yyyy HH:mm")</span>
+                        }
+                    </div>
+
+                    @if (ViewBag.CurrentUserId != null && review.UserId == ViewBag.CurrentUserId)
+                    {
+                        <div class="review-actions">
+                            <a asp-controller="Review" asp-action="Edit" asp-route-id="@review.Id" class="btn btn-sm btn-primary">Edit</a>
+                            <a asp-controller="Review" asp-action="Delete" asp-route-id="@review.Id" class="btn btn-sm btn-danger">Delete</a>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </div>
 </div>

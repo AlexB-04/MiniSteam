@@ -120,15 +120,28 @@ namespace MiniSteam.Controllers
                 return NotFound();
             }
 
+            var reviews = await _context.Reviews
+            .Include(review => review.User)
+            .Where(review => review.GameId == game.Id)
+            .OrderByDescending(review => review.CreatedAt)
+            .ToListAsync();
+
+            ViewBag.Reviews = reviews;
+            ViewBag.ReviewCount = reviews.Count;
+            ViewBag.CanReview = false;
+            ViewBag.CurrentUserId = null;
+
             ViewBag.IsInLibrary = false;
             ViewBag.IsInWishlist = false;
-
+            
             if (User.Identity?.IsAuthenticated == true)
             {
                 var user = await _userManager.GetUserAsync(User);
 
                 if (user != null)
                 {
+                    ViewBag.CurrentUserId = user.Id;
+
                     ViewBag.IsInLibrary = await _context.LibraryGames
                         .AnyAsync(libraryGame =>
                             libraryGame.UserId == user.Id &&
@@ -138,6 +151,13 @@ namespace MiniSteam.Controllers
                         .AnyAsync(wishlistItem =>
                             wishlistItem.UserId == user.Id &&
                             wishlistItem.GameId == game.Id);
+
+                    var alreadyReviewed = await _context.Reviews
+                        .AnyAsync(review =>
+                            review.UserId == user.Id &&
+                            review.GameId == game.Id);
+
+                    ViewBag.CanReview = ViewBag.IsInLibrary == true && !alreadyReviewed;
                 }
             }
 

@@ -847,3 +847,75 @@ body {
         font-size: 13px;
         cursor: pointer;
     }
+
+/* Reviews */
+
+.game-reviews {
+    margin-top: 20px;
+}
+
+.game-reviews-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+    .game-reviews-header h2 {
+        margin: 0;
+        color: #1b2838;
+        font-size: 24px;
+    }
+
+.review-card {
+    margin-bottom: 10px;
+    padding: 16px 18px;
+    background: #16202d;
+    border-left: 3px solid #2a475e;
+    color: #c7d5e0;
+}
+
+.review-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.review-recommended {
+    color: #66c0f4;
+    font-weight: 500;
+}
+
+.review-not-recommended {
+    color: #d96b6b;
+    font-weight: 500;
+}
+
+.review-user {
+    color: #8f98a0;
+    font-size: 13px;
+}
+
+.review-content {
+    margin: 0 0 12px;
+    color: #ffffff;
+    line-height: 1.5;
+}
+
+.review-date {
+    color: #536f86;
+    font-size: 12px;
+}
+
+.game-reviews-empty {
+    padding: 20px;
+    background: #16202d;
+    color: #8f98a0;
+}
+
+.review-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}

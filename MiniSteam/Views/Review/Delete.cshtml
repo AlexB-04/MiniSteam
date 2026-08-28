@@ -1,0 +1,31 @@
+﻿@model MiniSteam.Models.Entities.Review
+
+@{
+    ViewData["Title"] = "Delete Review";
+}
+
+<div class="genre-form-page">
+    <div class="genre-form-card">
+        <h1>Delete Review</h1>
+
+        <p>Are you sure you want to delete your review for <strong>@Model.Game.Name</strong>?</p>
+
+        <div class="review-card">
+            @if (Model.IsRecommended)
+            {
+                <span class="review-recommended">Recommended</span>
+            }
+            else
+            {
+                <span class="review-not-recommended">Not Recommended</span>
+            }
+
+            <p class="review-content">@Model.Content</p>
+        </div>
+
+        <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+            <button type="submit" class="btn btn-danger">Delete Review</button>
+            <a asp-controller="Games" asp-action="Details" asp-route-id="@Model.GameId" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,49 @@
+﻿@model MiniSteam.Models.Entities.Review
+
+@{
+    ViewData["Title"] = "Edit Review";
+}
+
+<div class="genre-form-page">
+    <div class="genre-form-card">
+        <h1>Edit Review</h1>
+
+        <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="GameId" />
+
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="genre-form-group">
+                <label asp-for="Content">Review</label>
+                <textarea asp-for="Content" class="form-control" rows="6"></textarea>
+                <span asp-validation-for="Content" class="text-danger"></span>
+            </div>
+
+            <div class="genre-form-group">
+                <label>Do you recommend this game?</label>
+
+                <div>
+                    <input type="radio" asp-for="IsRecommended" value="true" id="recommended" />
+                    <label for="recommended">Recommended</label>
+                </div>
+
+                <div>
+                    <input type="radio" asp-for="IsRecommended" value="false" id="notRecommended" />
+                    <label for="notRecommended">Not Recommended</label>
+                </div>
+            </div>
+
+            <div class="genre-form-actions">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <a asp-controller="Games" asp-action="Details" asp-route-id="@Model.GameId" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

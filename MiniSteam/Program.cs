@@ -3,6 +3,8 @@ using MiniSteam.Models.Entities;
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using MiniSteam.Data;
+using MiniSteam.Helpers;
+
 namespace MiniSteam
 {
     public class Program
@@ -18,7 +20,11 @@ namespace MiniSteam
             builder.Services.AddDbContext<DataContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            builder.Services.AddIdentity<User, IdentityRole>().AddEntityFrameworkStores<DataContext>().AddDefaultTokenProviders();
+            builder.Services.AddIdentity<User, IdentityRole>()
+            .AddEntityFrameworkStores<DataContext>()
+            .AddDefaultTokenProviders();
+
+            builder.Services.AddScoped<IMailHelper, MailHelper>();
 
             builder.Services.AddTransient<SeedDb>();
 

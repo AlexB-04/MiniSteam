@@ -1,0 +1,56 @@
+﻿@model IEnumerable<MiniSteam.Models.Entities.WishlistItem>
+
+@{
+    ViewData["Title"] = "Wishlist";
+}
+
+<div class="library-page">
+    <div class="library-header">
+        <div>
+            <h1>My Wishlist</h1>
+            <p>@Model.Count() games in your wishlist</p>
+        </div>
+
+        <a asp-controller="Games" asp-action="Store" class="library-store-button">Store</a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="library-empty">
+            <h2>Your wishlist is empty</h2>
+            <p>Games that you add to your wishlist will appear here.</p>
+            <a asp-controller="Games" asp-action="Store" class="library-store-button">Browse Store</a>
+        </div>
+    }
+    else
+    {
+        @foreach (var item in Model)
+        {
+            <div class="library-game-row">
+                <a asp-controller="Games" asp-action="Details" asp-route-id="@item.GameId" asp-route-from="wishlist" class="library-game-link">
+                    <div class="library-game-image">
+                        @if (!string.IsNullOrEmpty(item.Game.ImageUrl))
+                        {
+                            <img src="@item.Game.ImageUrl" alt="@item.Game.Name" />
+                        }
+                        else
+                        {
+                            <img src="~/images/noimage.jpg" alt="No image" />
+                        }
+                    </div>
+
+                    <div class="library-game-info">
+                        <h2>@item.Game.Name</h2>
+                        <span>@item.Game.Developer</span>
+                        <span>@item.Game.Price.ToString("0.00") €</span>
+                        <small>Added @item.AddedAt.ToString("dd MMM yyyy")</small>
+                    </div>
+                </a>
+
+                <div class="library-game-actions">
+                    <a asp-controller="Wishlist" asp-action="RemoveFromWishlist" asp-route-gameId="@item.GameId" class="library-remove-button">Remove</a>
+                </div>
+            </div>
+        }
+    }
+</div>

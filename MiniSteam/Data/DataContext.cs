@@ -20,6 +20,8 @@ namespace MiniSteam.Data
 
         public DbSet<PurchaseItem> PurchaseItems { get; set; }
 
+        public DbSet<WishlistItem> WishlistItems { get; set; }
+
         // Конструктор класса DataContext, который принимает параметры конфигурации DbContextOptions и передает их базовому классу DbContext.
         // Это позволяет настроить контекст базы данных, например, указать строку подключения к базе данных.
         public DataContext(DbContextOptions<DataContext> options) : base(options)
@@ -46,6 +48,11 @@ namespace MiniSteam.Data
                 .WithMany()
                 .HasForeignKey(purchaseItem  => purchaseItem.GameId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<WishlistItem>()
+                .HasIndex(wishlistItem => new { wishlistItem.UserId, wishlistItem.GameId })
+                .IsUnique();
+
         }
     }
 }

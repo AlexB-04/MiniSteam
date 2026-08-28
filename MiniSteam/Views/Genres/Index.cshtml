@@ -1,34 +1,49 @@
 @model IEnumerable<MiniSteam.Models.Entities.Genre>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Genres";
 }
 
-<h1>Index</h1>
-
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Name)
-            </th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(model => item.Name)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["ErrorMessage"]
+    </div>
 }
-    </tbody>
-</table>
+
+<div class="genres-page">
+    <div class="genres-header">
+        <div>
+            <h1>Genre Management</h1>
+            <p>@Model.Count() genres</p>
+        </div>
+
+        <a asp-action="Create" class="admin-create-button">Add Genre</a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="genres-empty">
+            <p>No genres found.</p>
+        </div>
+    }
+    else
+    {
+        <div class="genres-list">
+            @foreach (var item in Model)
+            {
+                <div class="genre-row">
+                    <div class="genre-name">
+                        <h2>@item.Name</h2>
+                    </div>
+
+                    <div class="genre-actions">
+                        <a asp-action="Edit" asp-route-id="@item.Id" class="admin-edit-button">Edit</a>
+                        <a asp-action="Details" asp-route-id="@item.Id" class="admin-details-button">Details</a>
+                        <a asp-action="Delete" asp-route-id="@item.Id" class="admin-delete-button">Delete</a>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

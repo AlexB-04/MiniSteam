@@ -1,0 +1,16 @@
+﻿@model MiniSteam.Models.Entities.WishlistItem
+
+@{
+    ViewData["Title"] = "Remove from Wishlist";
+}
+
+<div class="library-page">
+    <h1>Remove from Wishlist</h1>
+
+    <p>Are you sure you want to remove <strong>@Model.Game.Name</strong> from your wishlist?</p>
+
+    <form asp-controller="Wishlist" asp-action="RemoveConfirmed" asp-route-gameId="@Model.GameId" method="post">
+        <button type="submit" class="btn btn-danger">Remove</button>
+        <a asp-controller="Wishlist" asp-action="Index" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>

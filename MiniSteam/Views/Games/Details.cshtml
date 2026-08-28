@@ -13,6 +13,10 @@
     {
         <a asp-controller="Library" asp-action="Index" class="game-details-back">← Back to Library</a>
     }
+    else if (ViewBag.From == "wishlist")
+    {
+        <a asp-controller="Wishlist" asp-action="Index" class="game-details-back">← Back to Wishlist</a>
+    }
     else
     {
         <a asp-action="Store" class="game-details-back">← Back to Store</a>
@@ -58,16 +62,29 @@
             </div>
             @if (User.Identity?.IsAuthenticated == true)
             {
-                if (ViewBag.IsInLibrary == true)
-                {
-                    <button type="button" class="btn btn-secondary" disabled>Already in Library</button>
-                }
-                else
-                {
-                    <form asp-controller="Purchase" asp-action="Buy" asp-route-gameId="@Model.Id" method="post">
-                        <button type="submit" class="btn btn-primary">Buy for @Model.Price.ToString("0.00") €</button>
-                    </form>
-                }
+                <div class="game-details-actions">
+                    @if (ViewBag.IsInLibrary == true)
+                    {
+                        <button type="button" class="btn btn-secondary" disabled>Already in Library</button>
+                    }
+                    else
+                    {
+                        <form asp-controller="Purchase" asp-action="Buy" asp-route-gameId="@Model.Id" method="post">
+                            <button type="submit" class="btn btn-primary">Buy for @Model.Price.ToString("0.00") €</button>
+                        </form>
+
+                        @if (ViewBag.IsInWishlist == true)
+                        {
+                            <button type="button" class="btn btn-secondary" disabled>In Wishlist</button>
+                        }
+                        else
+                        {
+                            <form asp-controller="Wishlist" asp-action="AddToWishlist" asp-route-gameId="@Model.Id" method="post">
+                                <button type="submit" class="btn btn-outline-primary">Add to Wishlist</button>
+                            </form>
+                        }
+                    }
+                </div>
             }
         </div>
     </div>

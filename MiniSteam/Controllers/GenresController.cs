@@ -126,6 +126,14 @@ namespace MiniSteam.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
+            var isUsed = await _context.Games.AnyAsync(game => game.GenreId == id);
+
+            if (isUsed)
+            {
+                TempData["ErrorMessage"] = "This genre cannot be deleted because it is used by one or more games.";
+                return RedirectToAction(nameof(Index));
+            }
+
             var genre = await _context.Genres.FindAsync(id);
 
             if (genre == null)

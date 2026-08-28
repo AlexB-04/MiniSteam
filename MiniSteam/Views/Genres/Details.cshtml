@@ -1,24 +1,21 @@
 @model MiniSteam.Models.Entities.Genre
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Genre Details";
 }
 
-<h1>Details</h1>
+<div class="genre-form-page">
+    <div class="genre-form-card">
+        <h1>Genre Details</h1>
 
-<div>
-    <h4>Genre</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Name)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Name)
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+        <div class="genre-details-row">
+            <span>Name</span>
+            <strong>@Model.Name</strong>
+        </div>
+
+        <div class="genre-form-actions">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="admin-edit-button">Edit</a>
+            <a asp-action="Index" class="admin-details-button">Back to List</a>
+        </div>
+    </div>
 </div>

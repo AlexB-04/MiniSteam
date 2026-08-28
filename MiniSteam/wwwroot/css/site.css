@@ -423,6 +423,7 @@ body {
     border: none;
     border-radius: 2px;
     font-size: 13px;
+    text-decoration: none;
 }
 
     .library-remove-button:hover {
@@ -642,3 +643,207 @@ body {
         .purchase-item a:hover {
             color: #ffffff;
         }
+
+.library-remove-button:focus-visible,
+.library-store-button:focus-visible,
+.admin-create-button:focus-visible,
+.admin-edit-button:focus-visible,
+.admin-details-button:focus-visible,
+.admin-delete-button:focus-visible {
+    outline: 2px solid #66c0f4;
+    outline-offset: 2px;
+}
+
+.game-details-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+    .game-details-actions .btn {
+        width: 100%;
+    }
+
+@media (max-width: 768px) {
+    .steam-search-form {
+        flex-wrap: wrap;
+    }
+
+    .steam-search-box {
+        width: 100%;
+    }
+
+    .game-details-main {
+        flex-direction: column;
+    }
+
+    .game-details-image {
+        width: 100%;
+    }
+
+    .library-game-image {
+        width: 130px;
+        min-width: 130px;
+    }
+
+    .admin-game-image {
+        width: 140px;
+        min-width: 140px;
+    }
+}
+
+/* Genres */
+
+.genres-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding-bottom: 40px;
+}
+
+.genres-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    margin-bottom: 18px;
+    background: linear-gradient(135deg, #1b2838, #16202d);
+    border-bottom: 1px solid #2a475e;
+}
+
+    .genres-header h1 {
+        margin: 0;
+        color: #ffffff;
+        font-size: 30px;
+        font-weight: 400;
+    }
+
+    .genres-header p {
+        margin: 5px 0 0;
+        color: #8f98a0;
+    }
+
+.genres-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.genre-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 70px;
+    padding: 0 18px;
+    background: linear-gradient(to right, #16202d, #1b2b3a);
+    border-left: 3px solid transparent;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+    .genre-row:hover {
+        background: linear-gradient(to right, #1f3548, #29465d);
+        border-left-color: #66c0f4;
+    }
+
+.genre-name h2 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.genre-actions {
+    display: flex;
+    gap: 7px;
+}
+
+    .genre-actions a {
+        padding: 7px 11px;
+        text-decoration: none;
+        border-radius: 2px;
+        font-size: 13px;
+    }
+
+.genres-empty {
+    padding: 40px;
+    background: #16202d;
+    color: #8f98a0;
+    text-align: center;
+}
+
+/* Genre Forms */
+
+.genre-form-page {
+    max-width: 650px;
+    margin: 30px auto;
+}
+
+.genre-form-card {
+    padding: 24px;
+    background: linear-gradient(135deg, #1b2838, #16202d);
+    border: 1px solid #2a475e;
+    color: #c7d5e0;
+}
+
+    .genre-form-card h1 {
+        margin: 0 0 24px;
+        color: #ffffff;
+        font-size: 28px;
+        font-weight: 400;
+    }
+
+.genre-form-group {
+    margin-bottom: 20px;
+}
+
+    .genre-form-group label {
+        display: block;
+        margin-bottom: 6px;
+        color: #8f98a0;
+    }
+
+    .genre-form-group .form-control {
+        background: #101820;
+        border: 1px solid #2a475e;
+        color: #ffffff;
+    }
+
+        .genre-form-group .form-control:focus {
+            background: #101820;
+            color: #ffffff;
+            border-color: #66c0f4;
+            box-shadow: 0 0 0 2px rgba(102, 192, 244, 0.15);
+        }
+
+.genre-details-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px;
+    margin-bottom: 20px;
+    background: #101820;
+    border-left: 3px solid #66c0f4;
+}
+
+    .genre-details-row span {
+        color: #8f98a0;
+    }
+
+    .genre-details-row strong {
+        color: #ffffff;
+    }
+
+.genre-form-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+    .genre-form-actions a,
+    .genre-save-button {
+        padding: 8px 14px;
+        text-decoration: none;
+        border: none;
+        border-radius: 2px;
+        font-size: 13px;
+        cursor: pointer;
+    }

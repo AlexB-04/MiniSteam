@@ -82,6 +82,13 @@ namespace MiniSteam.Controllers
             _context.PurchaseItems.Add(purchaseItem);
             _context.LibraryGames.Add(libraryGame);
 
+            var wishlistItem = await _context.WishlistItems.FirstOrDefaultAsync(wishlistItem => wishlistItem.UserId == user.Id && wishlistItem.GameId == game.Id);
+
+            if (wishlistItem != null)
+            {
+                _context.WishlistItems.Remove(wishlistItem);
+            }
+
             await _context.SaveChangesAsync();
 
             return RedirectToAction("Index", "Library");

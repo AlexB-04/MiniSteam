@@ -121,6 +121,7 @@ namespace MiniSteam.Controllers
             }
 
             ViewBag.IsInLibrary = false;
+            ViewBag.IsInWishlist = false;
 
             if (User.Identity?.IsAuthenticated == true)
             {
@@ -132,6 +133,11 @@ namespace MiniSteam.Controllers
                         .AnyAsync(libraryGame =>
                             libraryGame.UserId == user.Id &&
                             libraryGame.GameId == game.Id);
+
+                    ViewBag.IsInWishlist = await _context.WishlistItems
+                        .AnyAsync(wishlistItem =>
+                            wishlistItem.UserId == user.Id &&
+                            wishlistItem.GameId == game.Id);
                 }
             }
 

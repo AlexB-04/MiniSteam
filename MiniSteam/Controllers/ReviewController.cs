@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using MiniSteam.Data;
 using MiniSteam.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using MiniSteam.Models.ViewModels;
 
 namespace MiniSteam.Controllers
 {
@@ -55,17 +56,17 @@ namespace MiniSteam.Controllers
                 return RedirectToAction("Details", "Games", new { id = game.Id });
             }
 
-            var review = new Review
+            var model = new ReviewViewModel
             {
                 GameId = game.Id
             };
 
-            return View(review);
+            return View(model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Review review)
+        public async Task<IActionResult> Create(ReviewViewModel model)
         {
             var user = await _userManager.GetUserAsync(User);
 
@@ -74,7 +75,7 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var game = await _context.Games.FindAsync(review.GameId);
+            var game = await _context.Games.FindAsync(model.GameId);
 
             if (game == null)
             {
@@ -92,9 +93,9 @@ namespace MiniSteam.Controllers
             }
 
             var alreadyReviewed = await _context.Reviews
-                .AnyAsync(existingReview =>
-                    existingReview.UserId == user.Id &&
-                    existingReview.GameId == game.Id);
+                .AnyAsync(review =>
+                    review.UserId == user.Id &&
+                    review.GameId == game.Id);
 
             if (alreadyReviewed)
             {
@@ -103,11 +104,17 @@ namespace MiniSteam.Controllers
 
             if (!ModelState.IsValid)
             {
-                return View(review);
+                return View(model);
             }
 
-            review.UserId = user.Id;
-            review.CreatedAt = DateTime.UtcNow;
+            var review = new Review
+            {
+                UserId = user.Id,
+                GameId = game.Id,
+                Content = model.Content,
+                IsRecommended = model.IsRecommended!.Value,
+                CreatedAt = DateTime.UtcNow
+            };
 
             _context.Reviews.Add(review);
             await _context.SaveChangesAsync();
@@ -136,12 +143,20 @@ namespace MiniSteam.Controllers
                 return Forbid();
             }
 
-            return View(review);
+            var model = new ReviewViewModel
+            {
+                Id = review.Id,
+                GameId = review.GameId,
+                Content = review.Content,
+                IsRecommended = review.IsRecommended
+            };
+
+            return View(model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Review review)
+        public async Task<IActionResult> Edit(int id, ReviewViewModel model)
         {
             var user = await _userManager.GetUserAsync(User);
 
@@ -150,7 +165,7 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            if (id != review.Id)
+            if (id != model.Id)
             {
                 return NotFound();
             }
@@ -167,13 +182,15 @@ namespace MiniSteam.Controllers
                 return Forbid();
             }
 
+            model.GameId = existingReview.GameId;
+
             if (!ModelState.IsValid)
             {
-                return View(review);
+                return View(model);
             }
 
-            existingReview.Content = review.Content;
-            existingReview.IsRecommended = review.IsRecommended;
+            existingReview.Content = model.Content;
+            existingReview.IsRecommended = model.IsRecommended!.Value;
             existingReview.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();

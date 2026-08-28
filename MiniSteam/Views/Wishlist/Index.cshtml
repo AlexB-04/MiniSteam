@@ -2,55 +2,264 @@
 
 @{
     ViewData["Title"] = "Wishlist";
+
+    var wishlistItems = Model
+        .OrderByDescending(item => item.AddedAt)
+        .ToList();
 }
 
-<div class="library-page">
-    <div class="library-header">
+<div class="wishlist-page">
+
+    <div class="wishlist-header">
         <div>
-            <h1>My Wishlist</h1>
-            <p>@Model.Count() games in your wishlist</p>
+            <span class="wishlist-eyebrow">YOUR PICKS</span>
+            <h1>Wishlist</h1>
+            <p>Games you want to keep an eye on.</p>
         </div>
 
-        <a asp-controller="Games" asp-action="Store" class="library-store-button">Store</a>
+        <div class="wishlist-header-actions">
+            <div class="wishlist-count-card">
+                <strong>@wishlistItems.Count</strong>
+                <span>@(wishlistItems.Count == 1 ? "game" : "games")</span>
+            </div>
+
+            <a asp-controller="Games" asp-action="Store" class="library-store-button">Browse Store</a>
+        </div>
     </div>
 
-    @if (!Model.Any())
+
+    @if (!wishlistItems.Any())
     {
-        <div class="library-empty">
+        <div class="wishlist-empty">
+
+            <div class="wishlist-empty-icon">♡</div>
+
+            <span class="wishlist-empty-label">YOUR WISHLIST</span>
+
             <h2>Your wishlist is empty</h2>
-            <p>Games that you add to your wishlist will appear here.</p>
-            <a asp-controller="Games" asp-action="Store" class="library-store-button">Browse Store</a>
+
+            <p>Save games that interest you and they will appear here.</p>
+
+            <a asp-controller="Games" asp-action="Store" class="library-store-button">Explore the Store</a>
+
         </div>
     }
     else
     {
-        @foreach (var item in Model)
-        {
-            <div class="library-game-row">
-                <a asp-controller="Games" asp-action="Details" asp-route-id="@item.GameId" asp-route-from="wishlist" class="library-game-link">
-                    <div class="library-game-image">
-                        @if (!string.IsNullOrEmpty(item.Game.ImageUrl))
-                        {
-                            <img src="@item.Game.ImageUrl" alt="@item.Game.Name" />
-                        }
-                        else
-                        {
-                            <img src="~/images/noimage.jpg" alt="No image" />
-                        }
-                    </div>
+        <div class="wishlist-toolbar">
 
-                    <div class="library-game-info">
-                        <h2>@item.Game.Name</h2>
-                        <span>@item.Game.Developer</span>
-                        <span>@item.Game.Price.ToString("0.00") €</span>
-                        <small>Added @item.AddedAt.ToString("dd MMM yyyy")</small>
-                    </div>
-                </a>
-
-                <div class="library-game-actions">
-                    <a asp-controller="Wishlist" asp-action="RemoveFromWishlist" asp-route-gameId="@item.GameId" class="library-remove-button">Remove</a>
-                </div>
+            <div class="wishlist-search-box">
+                <span class="wishlist-search-icon"></span>
+                <input id="wishlistSearch" type="text" placeholder="Search your wishlist" autocomplete="off" />
+                <button id="wishlistSearchClear" type="button" title="Clear search">×</button>
             </div>
-        }
+
+            <div class="wishlist-sort-area">
+                <span>Sort by</span>
+
+                <select id="wishlistSort">
+                    <option value="added-desc">Date Added</option>
+                    <option value="name-asc">Name</option>
+                    <option value="price-asc">Price: Low to High</option>
+                    <option value="price-desc">Price: High to Low</option>
+                    <option value="release-desc">Release Date</option>
+                </select>
+            </div>
+
+        </div>
+
+
+        <div id="wishlistNoResults" class="wishlist-search-empty" hidden>
+            <h3>No games found</h3>
+            <p>No games in your wishlist match that search.</p>
+        </div>
+
+
+        <div id="wishlistGameList" class="wishlist-list">
+
+            @foreach (var item in wishlistItems)
+            {
+                var isFree = item.Game.Price == 0;
+                var isUpcoming = item.Game.ReleaseDate.Date > DateTime.Today;
+
+                <article class="wishlist-row"
+                         data-game-name="@item.Game.Name.ToLowerInvariant()"
+                         data-game-developer="@item.Game.Developer.ToLowerInvariant()"
+                         data-price="@item.Game.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                         data-added="@item.AddedAt.ToString("O")"
+                         data-release="@item.Game.ReleaseDate.ToString("O")">
+
+                    <a asp-controller="Games" asp-action="Details" asp-route-id="@item.GameId" asp-route-from="wishlist" class="wishlist-game-main">
+
+                        <div class="wishlist-game-image">
+
+                            @if (!string.IsNullOrEmpty(item.Game.ImageUrl))
+                            {
+                                <img src="@item.Game.ImageUrl" alt="@item.Game.Name" />
+                            }
+                            else
+                            {
+                                <img src="~/images/noimage.jpg" alt="No image available" />
+                            }
+
+                        </div>
+
+
+                        <div class="wishlist-game-info">
+
+                            <h2>@item.Game.Name</h2>
+
+                            <span class="wishlist-developer">@item.Game.Developer</span>
+
+                            @if (isUpcoming)
+                            {
+                                <span class="wishlist-release-date">Releases @item.Game.ReleaseDate.ToString("dd MMM yyyy")</span>
+                            }
+                            else
+                            {
+                                <span class="wishlist-release-date">Released @item.Game.ReleaseDate.ToString("dd MMM yyyy")</span>
+                            }
+
+                            <span class="wishlist-added-date">Added to wishlist @item.AddedAt.ToString("dd MMM yyyy")</span>
+
+                        </div>
+
+                    </a>
+
+
+                    <div class="wishlist-side">
+
+                        <div class="wishlist-price">
+
+                            @if (isFree)
+                            {
+                                <span class="wishlist-free">Free</span>
+                            }
+                            else
+                            {
+                                <span>@item.Game.Price.ToString("0.00") €</span>
+                            }
+
+                        </div>
+
+
+                        <div class="wishlist-actions">
+
+                            <form asp-controller="Purchase" asp-action="Buy" asp-route-gameId="@item.GameId" method="post">
+
+                                @if (isFree)
+                                {
+                                    <button type="submit" class="wishlist-buy-button">Get Game</button>
+                                }
+                                else
+                                {
+                                    <button type="submit" class="wishlist-buy-button">Buy Now</button>
+                                }
+
+                            </form>
+
+                            <a asp-controller="Wishlist" asp-action="RemoveFromWishlist" asp-route-gameId="@item.GameId" class="wishlist-remove-button">Remove</a>
+
+                        </div>
+
+                    </div>
+
+                </article>
+            }
+
+        </div>
     }
+
 </div>
+
+
+@section Scripts {
+    <script>
+        const wishlistSearch = document.getElementById("wishlistSearch");
+        const wishlistSearchClear = document.getElementById("wishlistSearchClear");
+        const wishlistSort = document.getElementById("wishlistSort");
+        const wishlistGameList = document.getElementById("wishlistGameList");
+        const wishlistNoResults = document.getElementById("wishlistNoResults");
+
+        if (wishlistGameList) {
+            const getWishlistRows = () =>
+                Array.from(wishlistGameList.querySelectorAll(".wishlist-row"));
+
+            function filterWishlist() {
+                const searchValue = wishlistSearch?.value.trim().toLowerCase() ?? "";
+                let visibleGames = 0;
+
+                getWishlistRows().forEach(gameRow => {
+                    const gameName = gameRow.dataset.gameName ?? "";
+                    const gameDeveloper = gameRow.dataset.gameDeveloper ?? "";
+
+                    const matches =
+                        gameName.includes(searchValue) ||
+                        gameDeveloper.includes(searchValue);
+
+                    gameRow.hidden = !matches;
+
+                    if (matches) {
+                        visibleGames++;
+                    }
+                });
+
+                if (wishlistNoResults) {
+                    wishlistNoResults.hidden = visibleGames !== 0;
+                }
+
+                wishlistSearchClear?.classList.toggle("visible", searchValue.length > 0);
+            }
+
+
+            function sortWishlist() {
+                const sortValue = wishlistSort?.value ?? "added-desc";
+                const rows = getWishlistRows();
+
+                rows.sort((firstGame, secondGame) => {
+                    const firstName = firstGame.dataset.gameName ?? "";
+                    const secondName = secondGame.dataset.gameName ?? "";
+
+                    const firstPrice = Number(firstGame.dataset.price ?? 0);
+                    const secondPrice = Number(secondGame.dataset.price ?? 0);
+
+                    const firstAdded = new Date(firstGame.dataset.added ?? 0);
+                    const secondAdded = new Date(secondGame.dataset.added ?? 0);
+
+                    const firstRelease = new Date(firstGame.dataset.release ?? 0);
+                    const secondRelease = new Date(secondGame.dataset.release ?? 0);
+
+                    switch (sortValue) {
+                        case "name-asc":
+                            return firstName.localeCompare(secondName);
+
+                        case "price-asc":
+                            return firstPrice - secondPrice;
+
+                        case "price-desc":
+                            return secondPrice - firstPrice;
+
+                        case "release-desc":
+                            return secondRelease - firstRelease;
+
+                        default:
+                            return secondAdded - firstAdded;
+                    }
+                });
+
+                rows.forEach(gameRow => wishlistGameList.appendChild(gameRow));
+            }
+
+
+            wishlistSearch?.addEventListener("input", filterWishlist);
+
+            wishlistSearchClear?.addEventListener("click", function() {
+                wishlistSearch.value = "";
+                filterWishlist();
+                wishlistSearch.focus();
+            });
+
+            wishlistSort?.addEventListener("change", sortWishlist);
+        }
+    </script>
+}

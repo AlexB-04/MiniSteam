@@ -4,18 +4,90 @@
     ViewData["Title"] = "Genre Details";
 }
 
-<div class="genre-form-page">
-    <div class="genre-form-card">
-        <h1>Genre Details</h1>
+<div class="genre-details-page">
 
-        <div class="genre-details-row">
-            <span>Name</span>
-            <strong>@Model.Name</strong>
-        </div>
+    <div class="genre-editor-navigation">
 
-        <div class="genre-form-actions">
-            <a asp-action="Edit" asp-route-id="@Model.Id" class="admin-edit-button">Edit</a>
-            <a asp-action="Index" class="admin-details-button">Back to List</a>
-        </div>
+        <a asp-action="Index">
+            ← Back to Genre Management
+        </a>
+
+        <span>
+            GENRE ID @Model.Id
+        </span>
+
     </div>
+
+
+    <div class="genre-details-card">
+
+        <div class="genre-details-symbol">
+            #
+        </div>
+
+        <span class="genre-admin-eyebrow">
+            STORE CATEGORY
+        </span>
+
+        <h1>@Model.Name</h1>
+
+        <p>
+            This genre can be assigned to games and used when browsing the MiniSteam Store.
+        </p>
+
+
+        <div class="genre-details-data">
+
+            <div>
+
+                <span>GENRE ID</span>
+
+                <strong>
+                    @Model.Id
+                </strong>
+
+            </div>
+
+
+            <div>
+
+                <span>NAME</span>
+
+                <strong>
+                    @Model.Name
+                </strong>
+
+            </div>
+
+
+            <div>
+
+                <span>TYPE</span>
+
+                <strong>
+                    Store Category
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="genre-details-actions">
+
+            <a asp-action="Index"
+               class="genre-details-back">
+                Back
+            </a>
+
+            <a asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="genre-details-edit">
+                Edit Genre
+            </a>
+
+        </div>
+
+    </div>
+
 </div>

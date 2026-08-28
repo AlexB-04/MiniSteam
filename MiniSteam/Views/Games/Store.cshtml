@@ -2,56 +2,199 @@
 
 @{
     ViewData["Title"] = "Store";
+
+    var games = Model.ToList();
+
+    var searchString = Context.Request.Query["searchString"].ToString();
+    var genreId = Context.Request.Query["genreId"].ToString();
+
+    var hasFilters =
+        !string.IsNullOrWhiteSpace(searchString) ||
+        !string.IsNullOrWhiteSpace(genreId);
 }
 
-<h1>Store</h1>
+<div class="store-page">
 
-<div class="steam-search-bar">
-    <form asp-action="Store" method="get" class="steam-search-form">
-        <select name="genreId" class="steam-genre-select" asp-items="ViewBag.GenreId"><option value="">All Genres</option></select>
-
-        <div class="steam-search-box">
-            <input type="text" name="searchString" value="@Context.Request.Query["searchString"]" placeholder="search the store" />
-            <button type="submit" title="Search" class="steam-search-button"><span class="steam-search-icon"></span></button>
+    <div class="store-page-header">
+        <div>
+            <span class="store-eyebrow">MINISTEAM STORE</span>
+            <h1>Browse Games</h1>
+            <p>Discover games available on MiniSteam.</p>
         </div>
 
-        <a asp-action="Store" class="steam-clear">Clear</a>
-    </form>
-</div>
-
-<div class="store-results">
-    @if (!Model.Any())
-    {
-        <div class="store-no-results">
-            <h4>No games found</h4>
-            <p>Try another search or genre.</p>
+        <div class="store-game-count">
+            <strong>@games.Count</strong>
+            <span>@(games.Count == 1 ? "game" : "games")</span>
         </div>
-    }
-    else
-    {
-        @foreach (var game in Model)
+    </div>
+
+
+    <div class="steam-search-bar">
+
+        <form asp-action="Store"
+              method="get"
+              class="steam-search-form">
+
+            <div class="store-filter-field">
+                <span class="store-filter-label">Genre</span>
+
+                <select name="genreId"
+                        class="steam-genre-select"
+                        asp-items="ViewBag.GenreId">
+                    <option value="">All Genres</option>
+                </select>
+            </div>
+
+
+            <div class="store-filter-field store-search-field">
+                <span class="store-filter-label">Search</span>
+
+                <div class="steam-search-box">
+                    <input type="text"
+                           name="searchString"
+                           value="@searchString"
+                           placeholder="Search the store" />
+
+                    <button type="submit"
+                            title="Search"
+                            class="steam-search-button">
+                        <span class="steam-search-icon"></span>
+                    </button>
+                </div>
+            </div>
+
+
+            @if (hasFilters)
+            {
+                <a asp-action="Store"
+                   class="steam-clear">
+                    Clear filters
+                </a>
+            }
+
+        </form>
+
+    </div>
+
+
+    <div class="store-browse-header">
+        <div>
+            <span class="store-section-label">BROWSE</span>
+            <h2>
+                @if (hasFilters)
+                {
+                    <text>Search Results</text>
+                }
+                else
+                {
+                    <text>All Games</text>
+                }
+            </h2>
+        </div>
+
+        <span class="store-result-count">
+            @games.Count @(games.Count == 1 ? "result" : "results")
+        </span>
+    </div>
+
+
+    <div class="store-results">
+
+        @if (!games.Any())
         {
-            <a asp-action="Details" asp-route-id="@game.Id" asp-route-from="store" class="store-game-row">
-                <div class="store-game-image">
-                    @if (!string.IsNullOrEmpty(game.ImageUrl))
-                    {
-                        <img src="@game.ImageUrl" alt="@game.Name" />
-                    }
-                    else
-                    {
-                        <img src="/images/noimage.jpg" alt="No image" />
-                    }
-                </div>
+            <div class="store-no-results">
 
-                <div class="store-game-info">
-                    <h4>@game.Name</h4>
-                    <span>@game.Genre?.Name</span>
-                </div>
+                <div class="store-no-results-icon">?</div>
 
-                <div class="store-game-price">
-                    @game.Price.ToString("0.00") €
-                </div>
-            </a>
+                <h3>No games found</h3>
+
+                <p>
+                    We couldn't find anything matching your search.
+                    Try another title or genre.
+                </p>
+
+                <a asp-action="Store"
+                   class="store-reset-button">
+                    View all games
+                </a>
+
+            </div>
         }
-    }
+        else
+        {
+            @foreach (var game in games)
+            {
+                <a asp-action="Details"
+                   asp-route-id="@game.Id"
+                   asp-route-from="store"
+                   class="store-game-row">
+
+                    <div class="store-game-image">
+
+                        @if (!string.IsNullOrEmpty(game.ImageUrl))
+                        {
+                            <img src="@game.ImageUrl"
+                                 alt="@game.Name" />
+                        }
+                        else
+                        {
+                            <img src="/images/noimage.jpg"
+                                 alt="No image available" />
+                        }
+
+                    </div>
+
+
+                    <div class="store-game-info">
+
+                        <h4>@game.Name</h4>
+
+                        <div class="store-game-meta">
+
+                            @if (game.Genre != null)
+                            {
+                                <span class="store-game-genre">
+                                    @game.Genre.Name
+                                </span>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(game.Developer))
+                            {
+                                <span class="store-game-developer">
+                                    @game.Developer
+                                </span>
+                            }
+
+                        </div>
+
+                        <span class="store-game-date">
+                            Released @game.ReleaseDate.ToString("dd MMM yyyy")
+                        </span>
+
+                    </div>
+
+
+                    <div class="store-game-price-area">
+
+                        @if (game.Price == 0)
+                        {
+                            <span class="store-game-price-free">
+                                Free
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="store-game-price-value">
+                                @game.Price.ToString("0.00") €
+                            </span>
+                        }
+
+                    </div>
+
+                </a>
+            }
+        }
+
+    </div>
+
 </div>

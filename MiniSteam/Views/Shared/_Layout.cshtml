@@ -1,103 +1,286 @@
-﻿<!DOCTYPE html>
+﻿@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+
+    var storeActive =
+        currentController == "Games" &&
+        currentAction == "Store";
+
+    var libraryActive =
+        currentController == "Library";
+
+    var wishlistActive =
+        currentController == "Wishlist";
+
+    var adminActive =
+        User.IsInRole("Admin") &&
+        (
+            (currentController == "Games" &&
+             currentAction != "Store" &&
+             currentAction != "Details")
+            ||
+            currentController == "Genres"
+        );
+}
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <title>@ViewData["Title"] - MiniSteam</title>
+
     <script type="importmap"></script>
+
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/MiniSteam.styles.css" asp-append-version="true" />
 </head>
+
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">MiniSteam</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
+
+    <header class="mini-global-header">
+        <nav class="navbar navbar-expand-md mini-navbar">
+            <div class="container mini-navbar-container">
+
+                <a class="mini-brand" asp-controller="Home" asp-action="Index">
+                    <span class="mini-brand-logo">M</span>
+
+                    <span class="mini-brand-name">
+                        MINI<span>STEAM</span>
+                    </span>
+                </a>
+
+                <button class="navbar-toggler mini-navbar-toggler"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#miniSteamNavbar"
+                        aria-controls="miniSteamNavbar"
+                        aria-expanded="false"
+                        aria-label="Toggle navigation">
+                    <span class="mini-menu-icon">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </span>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
+
+                <div class="collapse navbar-collapse" id="miniSteamNavbar">
+
+                    <ul class="navbar-nav mini-main-nav">
+
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="mini-nav-link @(storeActive ? "active" : "")"
+                               asp-controller="Games"
+                               asp-action="Store">
+                                STORE
+                            </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
+
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item">
+                                <a class="mini-nav-link @(libraryActive ? "active" : "")"
+                                   asp-controller="Library"
+                                   asp-action="Index">
+                                    LIBRARY
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="mini-nav-link @(wishlistActive ? "active" : "")"
+                                   asp-controller="Wishlist"
+                                   asp-action="Index">
+                                    WISHLIST
+                                </a>
+                            </li>
+                        }
+
                         @if (User.IsInRole("Admin"))
                         {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Games" asp-action="Index">Games</a>
-                            </li>
+                            <li class="nav-item dropdown">
+                                <button class="mini-nav-link mini-nav-dropdown @(adminActive ? "active" : "")"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false">
+                                    ADMIN
+                                    <span class="mini-dropdown-arrow">▾</span>
+                                </button>
 
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Genres" asp-action="Index">Genres</a>
+                                <ul class="dropdown-menu mini-dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="Games"
+                                           asp-action="Index">
+                                            Manage Games
+                                        </a>
+                                    </li>
+
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="Games"
+                                           asp-action="Create">
+                                            Add Game
+                                        </a>
+                                    </li>
+
+                                    <li>
+                                        <hr class="dropdown-divider" />
+                                    </li>
+
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="Genres"
+                                           asp-action="Index">
+                                            Manage Genres
+                                        </a>
+                                    </li>
+                                </ul>
                             </li>
                         }
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Games" asp-action="Store">Store</a>
-                        </li>
-                        
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Wishlist" asp-action="Index">Wishlist</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Library" asp-action="Index">My Library</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Purchase" asp-action="History">Purchases</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Account" asp-action="ChangePassword">Change Password</a>
-                            </li>
-                        }
+
                     </ul>
-                    <ul class="navbar-nav ms-auto">
+
+                    <div class="mini-account-area">
+
                         @if (User.Identity?.IsAuthenticated == true)
                         {
-                            <li class="nav-item">
-                                <span class="nav-link text-dark">@User.Identity.Name</span>
-                            </li>
+                            <div class="dropdown">
 
-                            <li class="nav-item">
-                                <form asp-controller="Account" asp-action="Logout" method="post">
-                                    <button type="submit" class="nav-link btn btn-link text-dark">Logout</button>
-                                </form>
-                            </li>
+                                <button class="mini-user-button"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false">
+
+                                    <span class="mini-user-avatar">
+                                        @(User.Identity.Name?.Substring(0, 1).ToUpper())
+                                    </span>
+
+                                    <span class="mini-user-info">
+                                        <span class="mini-user-name">@User.Identity.Name</span>
+
+                                        @if (User.IsInRole("Admin"))
+                                        {
+                                            <span class="mini-user-role">Administrator</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="mini-user-role">MiniSteam User</span>
+                                        }
+                                    </span>
+
+                                    <span class="mini-dropdown-arrow">▾</span>
+                                </button>
+
+                                <ul class="dropdown-menu dropdown-menu-end mini-dropdown-menu mini-account-menu">
+
+                                    <li class="mini-account-menu-header">
+                                        <span>ACCOUNT</span>
+                                    </li>
+
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="Purchase"
+                                           asp-action="History">
+                                            Purchase History
+                                        </a>
+                                    </li>
+
+                                    <li>
+                                        <a class="dropdown-item"
+                                           asp-controller="Account"
+                                           asp-action="ChangePassword">
+                                            Change Password
+                                        </a>
+                                    </li>
+
+                                    <li>
+                                        <hr class="dropdown-divider" />
+                                    </li>
+
+                                    <li>
+                                        <form asp-controller="Account"
+                                              asp-action="Logout"
+                                              method="post">
+
+                                            @Html.AntiForgeryToken()
+
+                                            <button type="submit"
+                                                    class="dropdown-item mini-logout-button">
+                                                Sign Out
+                                            </button>
+                                        </form>
+                                    </li>
+
+                                </ul>
+                            </div>
                         }
                         else
                         {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Register</a>
-                            </li>
+                            <a class="mini-login-link"
+                               asp-controller="Account"
+                               asp-action="Login">
+                                LOGIN
+                            </a>
 
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Login</a>
-                            </li>
+                            <a class="mini-register-button"
+                               asp-controller="Account"
+                               asp-action="Register">
+                                JOIN MINISTEAM
+                            </a>
                         }
-                    </ul>
+
+                    </div>
+
                 </div>
             </div>
         </nav>
+
+        <div class="mini-header-glow"></div>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
+
+
+    <div class="container mini-content-container">
+        <main role="main">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - MiniSteam - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+
+    <footer class="mini-footer">
+        <div class="container mini-footer-container">
+
+            <div class="mini-footer-brand">
+                <span class="mini-footer-logo">M</span>
+
+                <div>
+                    <strong>MiniSteam</strong>
+                    <span>Educational game store project</span>
+                </div>
+            </div>
+
+            <div class="mini-footer-links">
+                <span>&copy; 2026 MiniSteam</span>
+
+                <a asp-controller="Home"
+                   asp-action="Privacy">
+                    Privacy
+                </a>
+
+                <a asp-controller="Games"
+                   asp-action="Store">
+                    Store
+                </a>
+            </div>
+
         </div>
     </footer>
+
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+
     @await RenderSectionAsync("Scripts", required: false)
+
 </body>
 </html>

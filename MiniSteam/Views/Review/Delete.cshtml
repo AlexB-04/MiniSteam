@@ -4,28 +4,125 @@
     ViewData["Title"] = "Delete Review";
 }
 
-<div class="genre-form-page">
-    <div class="genre-form-card">
-        <h1>Delete Review</h1>
+<div class="review-delete-page">
 
-        <p>Are you sure you want to delete your review for <strong>@Model.Game.Name</strong>?</p>
+    <div class="review-editor-navigation">
 
-        <div class="review-card">
-            @if (Model.IsRecommended)
-            {
-                <span class="review-recommended">Recommended</span>
-            }
-            else
-            {
-                <span class="review-not-recommended">Not Recommended</span>
-            }
+        <a asp-controller="Games"
+           asp-action="Details"
+           asp-route-id="@Model.GameId">
+            ← Back to Game
+        </a>
 
-            <p class="review-content">@Model.Content</p>
+        <span>
+            REVIEW ID @Model.Id
+        </span>
+
+    </div>
+
+
+    <div class="review-delete-card">
+
+        <div class="review-delete-icon">
+            !
         </div>
 
-        <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
-            <button type="submit" class="btn btn-danger">Delete Review</button>
-            <a asp-controller="Games" asp-action="Details" asp-route-id="@Model.GameId" class="btn btn-secondary">Cancel</a>
+        <span class="review-delete-eyebrow">
+            DESTRUCTIVE ACTION
+        </span>
+
+        <h1>Delete Review?</h1>
+
+        <p class="review-delete-description">
+            Your review for <strong>@Model.Game.Name</strong> will be permanently removed from MiniSteam.
+        </p>
+
+
+        <div class="review-delete-preview">
+
+            <div class="review-delete-verdict">
+
+                @if (Model.IsRecommended)
+                {
+                    <div class="review-delete-verdict-positive">
+
+                        <span>
+                            ✓
+                        </span>
+
+                        <div>
+                            <strong>Recommended</strong>
+                            <small>Your current recommendation</small>
+                        </div>
+
+                    </div>
+                }
+                else
+                {
+                    <div class="review-delete-verdict-negative">
+
+                        <span>
+                            ×
+                        </span>
+
+                        <div>
+                            <strong>Not Recommended</strong>
+                            <small>Your current recommendation</small>
+                        </div>
+
+                    </div>
+                }
+
+            </div>
+
+
+            <p class="review-delete-content">
+                @Model.Content
+            </p>
+
+        </div>
+
+
+        <div class="review-delete-warning">
+
+            <span>
+                !
+            </span>
+
+            <div>
+
+                <strong>
+                    This action cannot be undone
+                </strong>
+
+                <small>
+                    You may write another review later if you still own the game.
+                </small>
+
+            </div>
+
+        </div>
+
+
+        <form asp-action="Delete"
+              asp-route-id="@Model.Id"
+              method="post"
+              class="review-delete-actions">
+
+            <a asp-controller="Games"
+               asp-action="Details"
+               asp-route-id="@Model.GameId"
+               class="review-delete-cancel">
+                Cancel
+            </a>
+
+            <button type="submit"
+                    class="review-delete-confirm">
+                Delete Review
+            </button>
+
         </form>
+
     </div>
+
 </div>

@@ -1,45 +1,233 @@
-﻿@model MiniSteam.Models.Entities.Review
+﻿@model MiniSteam.Models.ViewModels.ReviewViewModel
 
 @{
     ViewData["Title"] = "Edit Review";
 }
 
-<div class="genre-form-page">
-    <div class="genre-form-card">
+<div class="review-editor-page">
+
+    <div class="review-editor-navigation">
+
+        <a asp-controller="Games"
+           asp-action="Details"
+           asp-route-id="@Model.GameId">
+            ← Back to Game
+        </a>
+
+        <span>
+            REVIEW ID @Model.Id
+        </span>
+
+    </div>
+
+
+    <div class="review-editor-heading">
+
+        <span class="review-editor-eyebrow">
+            UPDATE REVIEW
+        </span>
+
         <h1>Edit Review</h1>
 
-        <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
-            <input type="hidden" asp-for="Id" />
-            <input type="hidden" asp-for="GameId" />
+        <p>
+            Update your review or change whether you recommend this game.
+        </p>
 
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
-            <div class="genre-form-group">
-                <label asp-for="Content">Review</label>
-                <textarea asp-for="Content" class="form-control" rows="6"></textarea>
-                <span asp-validation-for="Content" class="text-danger"></span>
-            </div>
-
-            <div class="genre-form-group">
-                <label>Do you recommend this game?</label>
-
-                <div>
-                    <input type="radio" asp-for="IsRecommended" value="true" id="recommended" />
-                    <label for="recommended">Recommended</label>
-                </div>
-
-                <div>
-                    <input type="radio" asp-for="IsRecommended" value="false" id="notRecommended" />
-                    <label for="notRecommended">Not Recommended</label>
-                </div>
-            </div>
-
-            <div class="genre-form-actions">
-                <button type="submit" class="btn btn-primary">Save Changes</button>
-                <a asp-controller="Games" asp-action="Details" asp-route-id="@Model.GameId" class="btn btn-secondary">Cancel</a>
-            </div>
-        </form>
     </div>
+
+
+    <form asp-action="Edit"
+          asp-route-id="@Model.Id"
+          method="post"
+          class="review-editor-form">
+
+        <input type="hidden"
+               asp-for="Id" />
+
+        <input type="hidden"
+               asp-for="GameId" />
+
+
+        <div asp-validation-summary="ModelOnly"
+             class="review-editor-validation">
+        </div>
+
+
+        <section class="review-editor-card">
+
+            <div class="review-editor-section-heading">
+
+                <span class="review-editor-section-number">
+                    01
+                </span>
+
+                <div>
+
+                    <h2>Review Content</h2>
+
+                    <p>
+                        Make any changes you want to your original review.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="review-editor-field">
+
+                <label asp-for="Content">
+                    Review
+                </label>
+
+                <textarea asp-for="Content"
+                          class="review-editor-textarea"
+                          rows="8"
+                          maxlength="2000"></textarea>
+
+
+                <div class="review-editor-field-footer">
+
+                    <span asp-validation-for="Content"
+                          class="text-danger">
+                    </span>
+
+                    <span class="review-editor-limit">
+                        Maximum 2000 characters
+                    </span>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <section class="review-recommendation-card">
+
+            <div class="review-editor-section-heading">
+
+                <span class="review-editor-section-number">
+                    02
+                </span>
+
+                <div>
+
+                    <h2>Your Recommendation</h2>
+
+                    <p>
+                        You can change your recommendation if your opinion has changed.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="review-choice-grid">
+
+                <label class="review-choice review-choice-positive">
+
+                    <input type="radio"
+                           asp-for="IsRecommended"
+                           value="true" />
+
+                    <span class="review-choice-box">
+
+                        <span class="review-choice-icon">
+                            ✓
+                        </span>
+
+                        <span class="review-choice-content">
+
+                            <strong>
+                                Recommended
+                            </strong>
+
+                            <small>
+                                I recommend this game.
+                            </small>
+
+                        </span>
+
+                    </span>
+
+                </label>
+
+
+                <label class="review-choice review-choice-negative">
+
+                    <input type="radio"
+                           asp-for="IsRecommended"
+                           value="false" />
+
+                    <span class="review-choice-box">
+
+                        <span class="review-choice-icon">
+                            ×
+                        </span>
+
+                        <span class="review-choice-content">
+
+                            <strong>
+                                Not Recommended
+                            </strong>
+
+                            <small>
+                                I do not recommend this game.
+                            </small>
+
+                        </span>
+
+                    </span>
+
+                </label>
+
+            </div>
+            <span asp-validation-for="IsRecommended" class="review-choice-validation"></span>
+
+        </section>
+
+
+        <div class="review-editor-note">
+
+            <span class="review-editor-note-icon">
+                i
+            </span>
+
+            <div>
+
+                <strong>
+                    Updating your review
+                </strong>
+
+                <span>
+                    MiniSteam will show that this review has been edited.
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="review-editor-actions">
+
+            <a asp-controller="Games"
+               asp-action="Details"
+               asp-route-id="@Model.GameId"
+               class="review-editor-cancel">
+                Cancel
+            </a>
+
+            <button type="submit"
+                    class="review-editor-publish">
+                Save Changes
+            </button>
+
+        </div>
+
+    </form>
+
 </div>
 
 @section Scripts {

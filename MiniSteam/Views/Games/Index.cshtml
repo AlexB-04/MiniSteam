@@ -1,89 +1,237 @@
 @model IEnumerable<MiniSteam.Models.Entities.Game>
 
 @{
-    ViewData["Title"] = "Games";
+    ViewData["Title"] = "Game Management";
+
+    var games = Model.ToList();
+
+    var publicGames = games.Count(game => game.IsPublic);
+    var hiddenGames = games.Count(game => !game.IsPublic);
+    var freeGames = games.Count(game => game.Price == 0);
+
+    var searchString = Context.Request.Query["searchString"].ToString();
+    var genreId = Context.Request.Query["genreId"].ToString();
+
+    var hasFilters = !string.IsNullOrWhiteSpace(searchString) || !string.IsNullOrWhiteSpace(genreId);
 }
 
-@if (TempData["ErrorMessage"] != null)
-{
-    <div class="alert alert-danger">
-        @TempData["ErrorMessage"]
-    </div>
-}
+<div class="admin-games-page admin-games-v2">
 
-<div class="admin-games-header">
-    <div>
-        <h1>Game Management</h1>
-        <p>@Model.Count() games</p>
-    </div>
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="admin-message admin-message-danger">
+            <span class="admin-message-icon">!</span>
+            <span>@TempData["ErrorMessage"]</span>
+        </div>
+    }
 
-    <a asp-action="Create" class="admin-create-button">Add Game</a>
-</div>
+    <div class="admin-page-heading">
 
-<div class="steam-search-bar">
-    <form asp-action="Search" method="get" class="steam-search-form">
-
-        <select name="genreId" class="steam-genre-select" asp-items="ViewBag.GenreId"> <option value="">All Genres</option></select>
-
-        <div class="steam-search-box"> <input type="text" name="searchString" value="@Context.Request.Query["searchString"]" placeholder="search the store" />
-            <button type="submit" title="Search" class="steam-search-button"><span class="steam-search-icon"></span></button>
+        <div>
+            <span class="admin-page-eyebrow">MINISTEAM STORE ADMIN</span>
+            <h1>Game Management</h1>
+            <p>Manage the games available through the MiniSteam store.</p>
         </div>
 
-        <a asp-action="Index" class="steam-clear"> Clear </a>
+        <a asp-action="Create" class="admin-create-game-button">
+            <span>+</span>
+            Add Game
+        </a>
 
-    </form>
-</div>
-
-@if (!Model.Any())
-{
-    <div class="admin-games-empty">
-        <p>No games found.</p>
     </div>
-}
-else
-{
-    <div class="admin-games-list">
-        @foreach (var item in Model)
-        {
-            <div class="admin-game-row">
-                <div class="admin-game-image">
-                    @if (!string.IsNullOrEmpty(item.ImageUrl))
-                    {
-                        <img src="@item.ImageUrl" alt="@item.Name" />
-                    }
-                    else
-                    {
-                        <img src="/images/noimage.jpg" alt="No image" />
-                    }
+
+
+    <div class="admin-dashboard-summary">
+
+        <div class="admin-summary-card">
+            <span>TOTAL GAMES</span>
+            <strong>@games.Count</strong>
+            <small>registered</small>
+        </div>
+
+        <div class="admin-summary-card admin-summary-public">
+            <span>PUBLIC</span>
+            <strong>@publicGames</strong>
+            <small>visible in Store</small>
+        </div>
+
+        <div class="admin-summary-card admin-summary-hidden">
+            <span>HIDDEN</span>
+            <strong>@hiddenGames</strong>
+            <small>not publicly listed</small>
+        </div>
+
+        <div class="admin-summary-card">
+            <span>FREE</span>
+            <strong>@freeGames</strong>
+            <small>free games</small>
+        </div>
+
+    </div>
+
+
+    <div class="admin-filter-panel">
+
+        <form asp-action="Search" method="get" class="admin-filter-form">
+
+            <div class="admin-filter-field">
+                <label>Genre</label>
+                <select name="genreId" class="admin-filter-select" asp-items="ViewBag.GenreId"><option value="">All Genres</option></select>
+            </div>
+
+            <div class="admin-filter-field admin-filter-search-field">
+                <label>Search</label>
+
+                <div class="admin-search-box">
+                    <input type="text" name="searchString" value="@searchString" placeholder="Search games" />
+                    <button type="submit" title="Search"><span class="admin-search-icon"></span></button>
                 </div>
+            </div>
 
-                <div class="admin-game-info">
-                    <h2>@item.Name</h2>
+            @if (hasFilters)
+            {
+                <a asp-action="Index" class="admin-clear-filter">Clear filters</a>
+            }
 
-                    <div class="admin-game-meta">
-                        <span>@(item.Genre?.Name ?? "No Genre")</span>
-                        <span>@item.Developer</span>
-                        <span>@item.Price.ToString("0.00") €</span>
-                    </div>
+        </form>
 
-                    <div class="admin-game-status">
-                        @if (item.IsPublic)
+    </div>
+
+
+    <div class="admin-list-heading">
+
+        <div>
+            <span>APPLICATIONS</span>
+
+            <h2>
+                @if (hasFilters)
+                {
+                    <text>Search Results</text>
+                }
+                else
+                {
+                    <text>All Games</text>
+                }
+            </h2>
+        </div>
+
+        <span class="admin-result-count">@games.Count @(games.Count == 1 ? "game" : "games")</span>
+
+    </div>
+
+
+    @if (!games.Any())
+    {
+        <div class="admin-games-empty admin-games-empty-v2">
+
+            <div class="admin-empty-icon">?</div>
+
+            <h3>No games found</h3>
+
+            @if (hasFilters)
+            {
+                <p>No games match the current search or genre filter.</p>
+                <a asp-action="Index" class="admin-empty-button">View all games</a>
+            }
+            else
+            {
+                <p>No games have been created yet.</p>
+                <a asp-action="Create" class="admin-empty-button">Create first game</a>
+            }
+
+        </div>
+    }
+    else
+    {
+        <div class="admin-games-list admin-games-list-v2">
+
+            @foreach (var item in games)
+            {
+                <article class="admin-game-row admin-game-row-v2">
+
+                    <div class="admin-game-image">
+
+                        @if (!string.IsNullOrEmpty(item.ImageUrl))
                         {
-                            <span class="game-public">Public</span>
+                            <img src="@item.ImageUrl" alt="@item.Name" />
                         }
                         else
                         {
-                            <span class="game-hidden">Hidden</span>
+                            <img src="/images/noimage.jpg" alt="No image available" />
                         }
-                    </div>
-                </div>
 
-                <div class="admin-game-actions">
-                    <a asp-action="Edit" asp-route-id="@item.Id" class="admin-edit-button">Edit</a>
-                    <a asp-action="Details" asp-route-id="@item.Id" asp-route-from="games" class="admin-details-button">Details</a>
-                    <a asp-action="Delete" asp-route-id="@item.Id" class="admin-delete-button">Delete</a>
-                </div>
-            </div>
-        }
-    </div>
-}
+                    </div>
+
+
+                    <div class="admin-game-info admin-game-info-v2">
+
+                        <div class="admin-game-title-row">
+
+                            <div>
+                                <span class="admin-app-id">GAME ID @item.Id</span>
+                                <h2>@item.Name</h2>
+                            </div>
+
+                            @if (item.IsPublic)
+                            {
+                                <span class="game-public admin-status-badge">PUBLIC</span>
+                            }
+                            else
+                            {
+                                <span class="game-hidden admin-status-badge">HIDDEN</span>
+                            }
+
+                        </div>
+
+
+                        <div class="admin-game-meta admin-game-meta-v2">
+
+                            <div>
+                                <span class="admin-meta-label">GENRE</span>
+                                <strong>@(item.Genre?.Name ?? "No Genre")</strong>
+                            </div>
+
+                            <div>
+                                <span class="admin-meta-label">DEVELOPER</span>
+                                <strong>@item.Developer</strong>
+                            </div>
+
+                            <div>
+                                <span class="admin-meta-label">RELEASE</span>
+                                <strong>@item.ReleaseDate.ToString("dd MMM yyyy")</strong>
+                            </div>
+
+                            <div>
+                                <span class="admin-meta-label">PRICE</span>
+
+                                @if (item.Price == 0)
+                                {
+                                    <strong class="admin-free-price">Free</strong>
+                                }
+                                else
+                                {
+                                    <strong>@item.Price.ToString("0.00") €</strong>
+                                }
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="admin-game-actions admin-game-actions-v2">
+
+                        <a asp-action="Details" asp-route-id="@item.Id" asp-route-from="games" class="admin-details-button">View</a>
+                        <a asp-action="Edit" asp-route-id="@item.Id" class="admin-edit-button">Edit</a>
+                        <a asp-action="Delete" asp-route-id="@item.Id" class="admin-delete-button">Delete</a>
+
+                    </div>
+
+                </article>
+            }
+
+        </div>
+    }
+
+</div>

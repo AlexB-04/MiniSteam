@@ -4,25 +4,123 @@
     ViewData["Title"] = "Edit Genre";
 }
 
-<div class="genre-form-page">
-    <div class="genre-form-card">
-        <h1>Edit Genre</h1>
+<div class="genre-editor-page">
 
-        <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="genre-editor-navigation">
 
-            <input type="hidden" asp-for="Id" />
+        <a asp-action="Index">
+            ← Back to Genre Management
+        </a>
 
-            <div class="genre-form-group">
-                <label asp-for="Name"></label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-            </div>
+        <span>
+            GENRE ID @Model.Id
+        </span>
 
-            <div class="genre-form-actions">
-                <button type="submit" class="admin-edit-button genre-save-button">Save</button>
-                <a asp-action="Index" class="admin-details-button">Back to List</a>
-            </div>
-        </form>
     </div>
+
+
+    <div class="genre-editor-heading">
+
+        <span class="genre-admin-eyebrow">
+            EDIT CATEGORY
+        </span>
+
+        <h1>@Model.Name</h1>
+
+        <p>Update this MiniSteam Store category.</p>
+
+    </div>
+
+
+    <div class="genre-editor-layout">
+
+        <form asp-action="Edit"
+              method="post"
+              class="genre-editor-card">
+
+            <input type="hidden"
+                   asp-for="Id" />
+
+
+            <div asp-validation-summary="ModelOnly"
+                 class="genre-editor-validation">
+            </div>
+
+
+            <div class="genre-editor-section-heading">
+
+                <span>01</span>
+
+                <div>
+                    <h2>Genre Information</h2>
+                    <p>Edit the name used in the MiniSteam Store.</p>
+                </div>
+
+            </div>
+
+
+            <div class="genre-editor-field">
+
+                <label asp-for="Name">
+                    Genre Name
+                </label>
+
+                <input asp-for="Name"
+                       class="genre-editor-input" />
+
+                <span asp-validation-for="Name"
+                      class="text-danger">
+                </span>
+
+            </div>
+
+
+            <div class="genre-editor-actions">
+
+                <a asp-action="Index"
+                   class="genre-editor-cancel">
+                    Cancel
+                </a>
+
+                <button type="submit"
+                        class="genre-editor-save">
+                    Save Changes
+                </button>
+
+            </div>
+
+        </form>
+
+
+        <aside class="genre-editor-help">
+
+            <span class="genre-editor-help-label">
+                GENRE ID @Model.Id
+            </span>
+
+            <h2>Store Category</h2>
+
+            <p>
+                Changing the name updates how this genre is displayed wherever it is used in MiniSteam.
+            </p>
+
+
+            <div class="genre-editor-current">
+
+                <span>CURRENT NAME</span>
+
+                <strong>@Model.Name</strong>
+
+            </div>
+
+        </aside>
+
+    </div>
+
 </div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

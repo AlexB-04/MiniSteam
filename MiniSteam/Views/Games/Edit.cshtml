@@ -1,84 +1,248 @@
 @model MiniSteam.Models.ViewModels.GameViewModel
 
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "Edit Game";
 }
 
-<h1>Edit</h1>
+<div class="admin-game-form-page">
 
-<h4>Game</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit" enctype="multipart/form-data">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="Id" />
-            <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Description" class="control-label"></label>
-                <input asp-for="Description" class="form-control" />
-                <span asp-validation-for="Description" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Price" class="control-label"></label>
-                <input asp-for="Price" class="form-control" />
-                <span asp-validation-for="Price" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="ReleaseDate" class="control-label"></label>
-                <input asp-for="ReleaseDate" class="form-control" />
-                <span asp-validation-for="ReleaseDate" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Developer" class="control-label"></label>
-                <input asp-for="Developer" class="form-control" />
-                <span asp-validation-for="Developer" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Publisher" class="control-label"></label>
-                <input asp-for="Publisher" class="form-control" />
-                <span asp-validation-for="Publisher" class="text-danger"></span>
-            </div>
-
-            <input type="hidden" asp-for="ExistingImageUrl" />
-
-            @if (!string.IsNullOrEmpty(Model.ExistingImageUrl))
-            {
-                <div class="mb-3">
-                    <p>Current image:</p>
-                    <img src="@Model.ExistingImageUrl" alt="@Model.Name" style="width: 180px; height: 100px; object-fit: cover;" />
-                </div>
-            }
-
-            <div class="form-group"> <label asp-for="ImageFile" class="control-label"></label>
-                <input asp-for="ImageFile" type="file" class="form-control" />
-                <span asp-validation-for="ImageFile" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="IsPublic" class="control-label"></label>
-                <input asp-for="IsPublic" class="form-check-input" />
-                <span asp-validation-for="IsPublic" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="GenreId" class="control-label"></label>
-                <select asp-for="GenreId" class="form-control" asp-items="ViewBag.GenreId"> <option value="">-- Select Genre --</option> </select>
-                <span asp-validation-for="GenreId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
-            </div>
-        </form>
+    <div class="admin-form-navigation">
+        <a asp-action="Index">← Back to Game Management</a>
+        <span>GAME ID @Model.Id</span>
     </div>
-</div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
+
+    <div class="admin-form-heading">
+
+        <span class="admin-page-eyebrow">EDIT APPLICATION</span>
+
+        <h1>@Model.Name</h1>
+
+        <p>Update this game's MiniSteam store information.</p>
+
+    </div>
+
+
+    <form asp-action="Edit" method="post" enctype="multipart/form-data" class="admin-game-form">
+
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="ExistingImageUrl" />
+
+        <div asp-validation-summary="ModelOnly" class="admin-form-validation"></div>
+
+
+        <div class="admin-form-layout">
+
+            <div class="admin-form-main">
+
+                <section class="admin-form-section">
+
+                    <div class="admin-form-section-heading">
+
+                        <span class="admin-form-section-number">01</span>
+
+                        <div>
+                            <h2>Store Information</h2>
+                            <p>Information displayed on the MiniSteam store page.</p>
+                        </div>
+
+                    </div>
+
+
+                    <div class="admin-field">
+
+                        <label asp-for="Name">Game Name</label>
+
+                        <input asp-for="Name" class="admin-form-input" />
+
+                        <span asp-validation-for="Name" class="text-danger"></span>
+
+                    </div>
+
+
+                    <div class="admin-field">
+
+                        <label asp-for="Description">Description</label>
+
+                        <textarea asp-for="Description" class="admin-form-input admin-form-textarea" rows="7"></textarea>
+
+                        <span asp-validation-for="Description" class="text-danger"></span>
+
+                    </div>
+
+
+                    <div class="admin-field-grid">
+
+                        <div class="admin-field">
+
+                            <label asp-for="Developer">Developer</label>
+
+                            <input asp-for="Developer" class="admin-form-input" />
+
+                            <span asp-validation-for="Developer" class="text-danger"></span>
+
+                        </div>
+
+
+                        <div class="admin-field">
+
+                            <label asp-for="Publisher">Publisher</label>
+
+                            <input asp-for="Publisher" class="admin-form-input" />
+
+                            <span asp-validation-for="Publisher" class="text-danger"></span>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="admin-field-grid">
+
+                        <div class="admin-field">
+
+                            <label asp-for="ReleaseDate">Release Date</label>
+
+                            <input asp-for="ReleaseDate" class="admin-form-input" />
+
+                            <span asp-validation-for="ReleaseDate" class="text-danger"></span>
+
+                        </div>
+
+
+                        <div class="admin-field">
+
+                            <label asp-for="Price">Price</label>
+
+                            <div class="admin-price-input">
+                                <input asp-for="Price" class="admin-form-input" />
+                                <span>€</span>
+                            </div>
+
+                            <span asp-validation-for="Price" class="text-danger"></span>
+
+                            <small>Use 0 for a free game.</small>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </div>
+
+
+            <aside class="admin-form-sidebar">
+
+                <section class="admin-form-side-card">
+
+                    <div class="admin-side-heading">
+
+                        <span class="admin-form-section-number">02</span>
+
+                        <div>
+                            <h2>Store Presence</h2>
+                            <p>Artwork, genre and publishing status.</p>
+                        </div>
+
+                    </div>
+
+
+                    <div class="admin-field">
+
+                        <label asp-for="GenreId">Genre</label>
+
+                        <select asp-for="GenreId" class="admin-form-input admin-form-select" asp-items="ViewBag.GenreId"><option value="">Select Genre</option></select>
+
+                        <span asp-validation-for="GenreId" class="text-danger"></span>
+
+                    </div>
+
+
+                    <div class="admin-field">
+
+                        <label>Current Artwork</label>
+
+                        <div class="admin-current-image">
+
+                            @if (!string.IsNullOrEmpty(Model.ExistingImageUrl))
+                            {
+                                <img src="@Model.ExistingImageUrl" alt="@Model.Name" />
+                            }
+                            else
+                            {
+                                <img src="/images/noimage.jpg" alt="No image available" />
+                            }
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="admin-field">
+
+                        <label asp-for="ImageFile">Replace Artwork</label>
+
+                        <input asp-for="ImageFile" type="file" class="admin-file-input" accept=".jpg,.jpeg,.png,.webp" />
+
+                        <span asp-validation-for="ImageFile" class="text-danger"></span>
+
+                        <div class="admin-upload-note">
+                            <span>IMAGE</span>
+                            <p>Leave empty to keep the current image. Maximum size 5 MB.</p>
+                        </div>
+
+                    </div>
+
+
+                    <div class="admin-publish-option">
+
+                        <div>
+                            <strong>Public Store Page</strong>
+                            <span>Show this game to users in the MiniSteam Store.</span>
+                        </div>
+
+                        <label class="admin-switch">
+                            <input asp-for="IsPublic" />
+                            <span class="admin-switch-slider"></span>
+                        </label>
+
+                    </div>
+
+                </section>
+
+
+                <div class="admin-form-help">
+
+                    <span>GAME ID @Model.Id</span>
+
+                    <p>
+                        Hidden games remain available to users who already own them.
+                    </p>
+
+                </div>
+
+            </aside>
+
+        </div>
+
+
+        <div class="admin-form-footer">
+
+            <a asp-action="Index" class="admin-form-cancel">Cancel</a>
+
+            <button type="submit" class="admin-form-save">
+                Save Changes
+            </button>
+
+        </div>
+
+    </form>
+
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }

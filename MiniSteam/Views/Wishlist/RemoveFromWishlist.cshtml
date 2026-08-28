@@ -4,13 +4,93 @@
     ViewData["Title"] = "Remove from Wishlist";
 }
 
-<div class="library-page">
-    <h1>Remove from Wishlist</h1>
+<div class="wishlist-remove-page">
 
-    <p>Are you sure you want to remove <strong>@Model.Game.Name</strong> from your wishlist?</p>
+    <div class="wishlist-remove-navigation">
+        <a asp-controller="Wishlist" asp-action="Index">← Back to Wishlist</a>
+        <span>WISHLIST</span>
+    </div>
 
-    <form asp-controller="Wishlist" asp-action="RemoveConfirmed" asp-route-gameId="@Model.GameId" method="post">
-        <button type="submit" class="btn btn-danger">Remove</button>
-        <a asp-controller="Wishlist" asp-action="Index" class="btn btn-secondary">Cancel</a>
-    </form>
+    <div class="wishlist-remove-card">
+
+        <div class="wishlist-remove-icon">♡</div>
+
+        <span class="wishlist-remove-eyebrow">REMOVE ITEM</span>
+
+        <h1>Remove from Wishlist?</h1>
+
+        <p class="wishlist-remove-description">
+            This game will be removed from your MiniSteam wishlist.
+        </p>
+
+        <div class="wishlist-remove-game">
+
+            <div class="wishlist-remove-image">
+                @if (!string.IsNullOrEmpty(Model.Game.ImageUrl))
+                {
+                    <img src="@Model.Game.ImageUrl" alt="@Model.Game.Name" />
+                }
+                else
+                {
+                    <img src="~/images/noimage.jpg" alt="No image available" />
+                }
+            </div>
+
+            <div class="wishlist-remove-game-info">
+
+                <span class="wishlist-remove-game-label">WISHLIST ITEM</span>
+
+                <h2>@Model.Game.Name</h2>
+
+                <span class="wishlist-remove-developer">@Model.Game.Developer</span>
+
+                <div class="wishlist-remove-meta">
+
+                    <div>
+                        <small>PRICE</small>
+
+                        @if (Model.Game.Price == 0)
+                        {
+                            <strong class="wishlist-remove-free">Free</strong>
+                        }
+                        else
+                        {
+                            <strong>@Model.Game.Price.ToString("0.00") €</strong>
+                        }
+                    </div>
+
+                    <div>
+                        <small>ADDED</small>
+                        <strong>@Model.AddedAt.ToString("dd MMM yyyy")</strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="wishlist-remove-notice">
+
+            <span>i</span>
+
+            <div>
+                <strong>You can add it again later</strong>
+                <small>Removing a game from your wishlist does not affect purchases or your library.</small>
+            </div>
+
+        </div>
+
+        <form asp-controller="Wishlist" asp-action="RemoveConfirmed" asp-route-gameId="@Model.GameId" method="post" class="wishlist-remove-actions">
+
+            @Html.AntiForgeryToken()
+
+            <a asp-controller="Wishlist" asp-action="Index" class="wishlist-remove-cancel">Cancel</a>
+
+            <button type="submit" class="wishlist-remove-confirm">Remove from Wishlist</button>
+
+        </form>
+
+    </div>
+
 </div>

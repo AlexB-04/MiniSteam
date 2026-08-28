@@ -1,30 +1,125 @@
 @model MiniSteam.Models.Entities.Genre
 
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Create Genre";
 }
 
-<h1>Create</h1>
+<div class="genre-editor-page">
 
-<h4>Genre</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
-            <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
-            </div>
-        </form>
+    <div class="genre-editor-navigation">
+        <a asp-action="Index">← Back to Genre Management</a>
+        <span>STORE TAXONOMY</span>
     </div>
+
+
+    <div class="genre-editor-heading">
+
+        <span class="genre-admin-eyebrow">
+            NEW CATEGORY
+        </span>
+
+        <h1>Create Genre</h1>
+
+        <p>Add a new category that can be assigned to games in MiniSteam.</p>
+
+    </div>
+
+
+    <div class="genre-editor-layout">
+
+        <form asp-action="Create"
+              method="post"
+              class="genre-editor-card">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="genre-editor-validation">
+            </div>
+
+
+            <div class="genre-editor-section-heading">
+
+                <span>01</span>
+
+                <div>
+                    <h2>Genre Information</h2>
+                    <p>Define the category name shown throughout MiniSteam.</p>
+                </div>
+
+            </div>
+
+
+            <div class="genre-editor-field">
+
+                <label asp-for="Name">
+                    Genre Name
+                </label>
+
+                <input asp-for="Name"
+                       class="genre-editor-input"
+                       placeholder="Example: Adventure" />
+
+                <span asp-validation-for="Name"
+                      class="text-danger">
+                </span>
+
+                <small>
+                    Use a clear category name that describes the type of game.
+                </small>
+
+            </div>
+
+
+            <div class="genre-editor-actions">
+
+                <a asp-action="Index"
+                   class="genre-editor-cancel">
+                    Cancel
+                </a>
+
+                <button type="submit"
+                        class="genre-editor-save">
+                    Create Genre
+                </button>
+
+            </div>
+
+        </form>
+
+
+        <aside class="genre-editor-help">
+
+            <span class="genre-editor-help-label">
+                STORE METADATA
+            </span>
+
+            <h2>What is a genre?</h2>
+
+            <p>
+                Genres help users understand and filter the types of games available in the MiniSteam Store.
+            </p>
+
+
+            <div class="genre-help-example">
+
+                <span>EXAMPLES</span>
+
+                <div>
+                    <strong>Adventure</strong>
+                    <strong>Puzzle</strong>
+                    <strong>Horror</strong>
+                    <strong>JRPG</strong>
+                </div>
+
+            </div>
+
+        </aside>
+
+    </div>
+
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

@@ -2,52 +2,299 @@
 
 @{
     ViewData["Title"] = "My Library";
+
+    var libraryGames = Model
+        .OrderByDescending(item => item.AddedAt)
+        .ToList();
+
+    var recentGames = libraryGames
+        .Take(3)
+        .ToList();
 }
 
-<div class="library-page">
-    <div class="library-header">
+<div class="library-page library-page-v2">
+
+    <div class="library-v2-header">
+
         <div>
-            <h1>My Library</h1>
-            <p>@Model.Count() games in your library</p>
+            <span class="library-eyebrow">YOUR COLLECTION</span>
+            <h1>Library</h1>
+            <p>Games you own on MiniSteam.</p>
         </div>
 
-        <a asp-controller="Games" asp-action="Store" class="library-store-button">Store</a>
+        <div class="library-header-actions">
+
+            <div class="library-count-card">
+                <strong>@libraryGames.Count</strong>
+                <span>@(libraryGames.Count == 1 ? "game" : "games")</span>
+            </div>
+
+            <a asp-controller="Games"
+               asp-action="Store"
+               class="library-store-button">
+                Browse Store
+            </a>
+
+        </div>
+
     </div>
 
-    @if (!Model.Any())
+
+    @if (!libraryGames.Any())
     {
-        <div class="library-empty">
+        <div class="library-empty library-empty-v2">
+
+            <div class="library-empty-icon">+</div>
+
+            <span class="library-empty-label">YOUR LIBRARY</span>
+
             <h2>Your library is empty</h2>
-            <p>Games that you add will appear here.</p>
-            <a asp-controller="Games" asp-action="Store" class="library-store-button">Browse Store</a>
+
+            <p>
+                Games you purchase on MiniSteam will appear here.
+            </p>
+
+            <a asp-controller="Games"
+               asp-action="Store"
+               class="library-store-button">
+                Browse the Store
+            </a>
+
         </div>
     }
     else
     {
-        <div class="library-games">
-            @foreach (var item in Model)
-            {
-                <div class="library-game-row">
-                    <a asp-controller="Games" asp-action="Details" asp-route-id="@item.GameId" asp-route-from="library" class="library-game-link">
-                        <div class="library-game-image">
+        <section class="library-recent-section">
+
+            <div class="library-section-header">
+                <div>
+                    <span class="library-section-eyebrow">RECENT</span>
+                    <h2>Recently Added</h2>
+                </div>
+
+                <span class="library-section-description">
+                    Your newest additions
+                </span>
+            </div>
+
+
+            <div class="library-recent-grid">
+
+                @foreach (var item in recentGames)
+                {
+                    <a asp-controller="Games"
+                       asp-action="Details"
+                       asp-route-id="@item.GameId"
+                       asp-route-from="library"
+                       class="library-recent-card">
+
+                        <div class="library-recent-image">
+
                             @if (!string.IsNullOrEmpty(item.Game.ImageUrl))
                             {
-                                <img src="@item.Game.ImageUrl" alt="@item.Game.Name" />
+                                <img src="@item.Game.ImageUrl"
+                                     alt="@item.Game.Name" />
                             }
                             else
                             {
-                                <img src="~/images/noimage.jpg" alt="No image" />
+                                <img src="~/images/noimage.jpg"
+                                     alt="No image available" />
                             }
+
+                            <div class="library-owned-overlay">
+                                IN LIBRARY
+                            </div>
+
                         </div>
 
-                        <div class="library-game-info">
-                            <h2>@item.Game.Name</h2>
-                            <span>@item.Game.Developer</span>
-                            <small>Added @item.AddedAt.ToString("dd MMM yyyy")</small>
+                        <div class="library-recent-info">
+
+                            <h3>@item.Game.Name</h3>
+
+                            <span class="library-recent-developer">
+                                @item.Game.Developer
+                            </span>
+
+                            <span class="library-recent-date">
+                                Added @item.AddedAt.ToString("dd MMM yyyy")
+                            </span>
+
                         </div>
+
                     </a>
+                }
+
+            </div>
+
+        </section>
+
+
+        <section class="library-all-section">
+
+            <div class="library-section-header library-all-header">
+
+                <div>
+                    <span class="library-section-eyebrow">COLLECTION</span>
+                    <h2>All Games</h2>
                 </div>
-            }
-        </div>
+
+                <div class="library-search-box">
+
+                    <span class="library-search-symbol"></span>
+
+                    <input id="librarySearch"
+                           type="text"
+                           placeholder="Search your library"
+                           autocomplete="off" />
+
+                    <button id="librarySearchClear"
+                            type="button"
+                            title="Clear search">
+                        ×
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div id="libraryNoResults"
+                 class="library-search-empty"
+                 hidden>
+
+                <h3>No games found</h3>
+
+                <p>
+                    No games in your library match that search.
+                </p>
+
+            </div>
+
+
+            <div class="library-games library-games-v2"
+                 id="libraryGameList">
+
+                @foreach (var item in libraryGames)
+                {
+                    <div class="library-game-row library-game-row-v2"
+                         data-game-name="@item.Game.Name.ToLowerInvariant()"
+                         data-game-developer="@item.Game.Developer.ToLowerInvariant()">
+
+                        <a asp-controller="Games"
+                           asp-action="Details"
+                           asp-route-id="@item.GameId"
+                           asp-route-from="library"
+                           class="library-game-link">
+
+                            <div class="library-game-image">
+
+                                @if (!string.IsNullOrEmpty(item.Game.ImageUrl))
+                                {
+                                    <img src="@item.Game.ImageUrl"
+                                         alt="@item.Game.Name" />
+                                }
+                                else
+                                {
+                                    <img src="~/images/noimage.jpg"
+                                         alt="No image available" />
+                                }
+
+                            </div>
+
+
+                            <div class="library-game-info">
+
+                                <div class="library-game-title-row">
+                                    <h2>@item.Game.Name</h2>
+
+                                    <span class="library-owned-small">
+                                        OWNED
+                                    </span>
+                                </div>
+
+                                <span class="library-game-developer">
+                                    @item.Game.Developer
+                                </span>
+
+                                <small>
+                                    Added to your library
+                                    @item.AddedAt.ToString("dd MMM yyyy")
+                                </small>
+
+                            </div>
+
+
+                            <div class="library-game-open">
+                                <span>View Game</span>
+                                <strong>›</strong>
+                            </div>
+
+                        </a>
+
+                    </div>
+                }
+
+            </div>
+
+        </section>
     }
+
 </div>
+
+
+@section Scripts {
+    <script>
+        const librarySearch = document.getElementById("librarySearch");
+        const librarySearchClear = document.getElementById("librarySearchClear");
+        const libraryGameList = document.getElementById("libraryGameList");
+        const libraryNoResults = document.getElementById("libraryNoResults");
+
+        if (librarySearch && libraryGameList) {
+            const libraryRows = Array.from(
+                libraryGameList.querySelectorAll(".library-game-row-v2")
+            );
+
+            function filterLibrary() {
+                const searchValue = librarySearch.value
+                    .trim()
+                    .toLowerCase();
+
+                let visibleGames = 0;
+
+                libraryRows.forEach(gameRow => {
+                    const gameName = gameRow.dataset.gameName ?? "";
+                    const gameDeveloper = gameRow.dataset.gameDeveloper ?? "";
+
+                    const matches =
+                        gameName.includes(searchValue) ||
+                        gameDeveloper.includes(searchValue);
+
+                    gameRow.hidden = !matches;
+
+                    if (matches) {
+                        visibleGames++;
+                    }
+                });
+
+                if (libraryNoResults) {
+                    libraryNoResults.hidden = visibleGames !== 0;
+                }
+
+                if (librarySearchClear) {
+                    librarySearchClear.classList.toggle(
+                        "visible",
+                        searchValue.length > 0
+                    );
+                }
+            }
+
+            librarySearch.addEventListener("input", filterLibrary);
+
+            librarySearchClear?.addEventListener("click", function() {
+                librarySearch.value = "";
+                filterLibrary();
+                librarySearch.focus();
+            });
+        }
+    </script>
+}

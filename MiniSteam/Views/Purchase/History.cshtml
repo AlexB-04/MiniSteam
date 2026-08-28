@@ -2,45 +2,264 @@
 
 @{
     ViewData["Title"] = "Purchase History";
+
+    var purchases = Model
+        .OrderByDescending(purchase => purchase.PurchasedAt)
+        .ToList();
+
+    var totalSpent = purchases.Sum(purchase => purchase.TotalPrice);
+    var totalGames = purchases.Sum(purchase => purchase.PurchaseItems.Count);
 }
 
-<div class="purchase-history-page">
-    <div class="purchase-history-header">
-        <h1>Purchase History</h1>
-        <a asp-controller="Games" asp-action="Store" class="btn btn-secondary">Back to Store</a>
+<div class="purchase-page-v2">
+
+    <div class="purchase-v2-header">
+
+        <div>
+            <span class="purchase-eyebrow">ACCOUNT</span>
+            <h1>Purchase History</h1>
+            <p>Review games purchased through your MiniSteam account.</p>
+        </div>
+
+        <a asp-controller="Games"
+           asp-action="Store"
+           class="purchase-store-button">
+            Browse Store
+        </a>
+
     </div>
 
-    @if (!Model.Any())
+
+    @if (!purchases.Any())
     {
-        <p>You have not purchased any games yet.</p>
+        <div class="purchase-empty-v2">
+
+            <div class="purchase-empty-icon">€</div>
+
+            <span class="purchase-empty-label">
+                PURCHASE HISTORY
+            </span>
+
+            <h2>No purchases yet</h2>
+
+            <p>
+                Games you purchase on MiniSteam will appear here.
+            </p>
+
+            <a asp-controller="Games"
+               asp-action="Store"
+               class="purchase-store-button">
+                Browse the Store
+            </a>
+
+        </div>
     }
     else
     {
-        @foreach (var purchase in Model)
-        {
-            <div class="purchase-card">
-                <div class="purchase-card-header">
-                    <div>
-                        <strong>Purchase #@purchase.Id</strong>
-                        <span>@purchase.PurchasedAt.ToString("dd MMM yyyy HH:mm")</span>
-                    </div>
+        <div class="purchase-summary">
 
-                    <strong>@purchase.TotalPrice.ToString("0.00") €</strong>
+            <div class="purchase-summary-card">
+                <span class="purchase-summary-label">
+                    PURCHASES
+                </span>
+
+                <strong>@purchases.Count</strong>
+
+                <small>
+                    @(purchases.Count == 1 ? "transaction" : "transactions")
+                </small>
+            </div>
+
+
+            <div class="purchase-summary-card">
+                <span class="purchase-summary-label">
+                    GAMES
+                </span>
+
+                <strong>@totalGames</strong>
+
+                <small>
+                    purchased
+                </small>
+            </div>
+
+
+            <div class="purchase-summary-card purchase-summary-total">
+                <span class="purchase-summary-label">
+                    TOTAL SPENT
+                </span>
+
+                <strong>@totalSpent.ToString("0.00") €</strong>
+
+                <small>
+                    through MiniSteam
+                </small>
+            </div>
+
+        </div>
+
+
+        <section class="purchase-history-section">
+
+            <div class="purchase-section-header">
+
+                <div>
+                    <span class="purchase-section-eyebrow">
+                        TRANSACTIONS
+                    </span>
+
+                    <h2>Your Purchases</h2>
                 </div>
 
-                @foreach (var item in purchase.PurchaseItems)
+                <span class="purchase-section-count">
+                    @purchases.Count @(purchases.Count == 1 ? "purchase" : "purchases")
+                </span>
+
+            </div>
+
+
+            <div class="purchase-list">
+
+                @foreach (var purchase in purchases)
                 {
-                    <div class="purchase-item">
-                        <div>
-                            <a asp-controller="Games" asp-action="Details" asp-route-id="@item.GameId">@item.Game.Name</a>
+                    <article class="purchase-card purchase-card-v2">
+
+                        <div class="purchase-card-header purchase-card-header-v2">
+
+                            <div class="purchase-transaction-info">
+
+                                <div class="purchase-transaction-icon">
+                                    ✓
+                                </div>
+
+                                <div>
+                                    <span class="purchase-transaction-label">
+                                        PURCHASE
+                                    </span>
+
+                                    <strong>
+                                        Transaction #@purchase.Id
+                                    </strong>
+
+                                    <span class="purchase-transaction-date">
+                                        @purchase.PurchasedAt.ToString("dd MMM yyyy · HH:mm")
+                                    </span>
+                                </div>
+
+                            </div>
+
+
+                            <div class="purchase-transaction-total">
+
+                                <span>Total</span>
+
+                                @if (purchase.TotalPrice == 0)
+                                {
+                                    <strong class="purchase-free">
+                                        Free
+                                    </strong>
+                                }
+                                else
+                                {
+                                    <strong>
+                                        @purchase.TotalPrice.ToString("0.00") €
+                                    </strong>
+                                }
+
+                            </div>
+
                         </div>
 
-                        <div>
-                            @item.Price.ToString("0.00") €
+
+                        <div class="purchase-items">
+
+                            @foreach (var item in purchase.PurchaseItems)
+                            {
+                                <div class="purchase-item purchase-item-v2">
+
+                                    <a asp-controller="Games"
+                                       asp-action="Details"
+                                       asp-route-id="@item.GameId"
+                                       asp-route-from="library"
+                                       class="purchase-game-link">
+
+                                        <div class="purchase-game-image">
+
+                                            @if (!string.IsNullOrEmpty(item.Game.ImageUrl))
+                                            {
+                                                <img src="@item.Game.ImageUrl"
+                                                     alt="@item.Game.Name" />
+                                            }
+                                            else
+                                            {
+                                                <img src="~/images/noimage.jpg"
+                                                     alt="No image available" />
+                                            }
+
+                                        </div>
+
+
+                                        <div class="purchase-game-info">
+
+                                            <strong>
+                                                @item.Game.Name
+                                            </strong>
+
+                                            <span>
+                                                @item.Game.Developer
+                                            </span>
+
+                                            <small>
+                                                View in your library
+                                            </small>
+
+                                        </div>
+
+                                    </a>
+
+
+                                    <div class="purchase-item-price">
+
+                                        @if (item.Price == 0)
+                                        {
+                                            <span class="purchase-free">
+                                                Free
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span>
+                                                @item.Price.ToString("0.00") €
+                                            </span>
+                                        }
+
+                                    </div>
+
+                                </div>
+                            }
+
                         </div>
-                    </div>
+
+
+                        <div class="purchase-card-footer">
+
+                            <span>
+                                @purchase.PurchaseItems.Count
+                                @(purchase.PurchaseItems.Count == 1 ? "item" : "items")
+                            </span>
+
+                            <span>
+                                Purchased @purchase.PurchasedAt.ToString("dd MMM yyyy")
+                            </span>
+
+                        </div>
+
+                    </article>
                 }
+
             </div>
-        }
+
+        </section>
     }
+
 </div>

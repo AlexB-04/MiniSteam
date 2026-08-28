@@ -11,37 +11,73 @@ namespace MiniSteam.Controllers
 {
     public class GamesController : Controller
     {
-        // Контроллер GamesController, который управляет действиями, связанными с играми в приложении MiniSteam.
-        // Он наследуется от базового класса Controller, предоставляемого ASP.NET Core MVC.
         private readonly DataContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
-
         private readonly UserManager<User> _userManager;
 
-        // Конструктор класса GamesController, который принимает экземпляр DataContext и сохраняет его в приватное поле _context.
-        // Это позволяет контроллеру взаимодействовать с базой данных через контекст.
+        private static readonly string[] AllowedImageExtensions =
+        {
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp"
+        };
+
+        private static readonly string[] AllowedImageContentTypes =
+        {
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+        };
+
+        private const long MaxImageSize = 5 * 1024 * 1024;
+
         public GamesController(
-    DataContext context,
-    IWebHostEnvironment webHostEnvironment,
-    UserManager<User> userManager)
+            DataContext context,
+            IWebHostEnvironment webHostEnvironment,
+            UserManager<User> userManager)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
             _userManager = userManager;
         }
 
+        // Проверяет тип, расширение и размер загруженной картинки.
+        private bool IsValidImage(IFormFile file)
+        {
+            var extension = Path
+                .GetExtension(file.FileName)
+                .ToLowerInvariant();
+
+            var contentType = file.ContentType
+                .ToLowerInvariant();
+
+            return AllowedImageExtensions.Contains(extension)
+                && AllowedImageContentTypes.Contains(contentType)
+                && file.Length > 0
+                && file.Length <= MaxImageSize;
+        }
 
         // GET: Games
-        // Метод Index возвращает представление со списком всех игр, упорядоченных по имени. Он использует контекст базы данных для получения данных о играх и их жанрах.
+        // Административный список всех игр.
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Index()
         {
-            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name");
+            ViewBag.GenreId = new SelectList(
+                _context.Genres.OrderBy(genre => genre.Name),
+                "Id",
+                "Name");
 
-            return View(_context.Games.Include(game => game.Genre).OrderBy(game => game.Name));
+            var games = await _context.Games
+                .Include(game => game.Genre)
+                .OrderBy(game => game.Name)
+                .ToListAsync();
+
+            return View(games);
         }
 
         // GET: Games/Store
+        // Публичный магазин. Показываются только опубликованные игры.
         public IActionResult Store(string? searchString, int? genreId)
         {
             var games = _context.Games
@@ -50,115 +86,161 @@ namespace MiniSteam.Controllers
 
             if (!string.IsNullOrEmpty(searchString))
             {
-                games = games.Where(game => game.Name.Contains(searchString) || (game.Genre != null && game.Genre.Name.Contains(searchString)));
+                games = games.Where(game =>
+                    game.Name.Contains(searchString) ||
+                    (game.Genre != null &&
+                     game.Genre.Name.Contains(searchString)));
             }
 
             if (genreId.HasValue)
             {
-                games = games.Where(game => game.GenreId == genreId.Value);
+                games = games.Where(game =>
+                    game.GenreId == genreId.Value);
             }
 
-            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name", genreId);
+            ViewBag.GenreId = new SelectList(
+                _context.Genres.OrderBy(genre => genre.Name),
+                "Id",
+                "Name",
+                genreId);
 
-            return View(games.OrderBy(game => game.Name).ToList());
+            return View(
+                games
+                    .OrderBy(game => game.Name)
+                    .ToList());
         }
 
         // GET: Games/Search
-        // Метод Search возвращает представление со списком игр, которые соответствуют заданной строке поиска.
-        // Он фильтрует игры по имени и упорядочивает их по имени.
+        // Поиск в административном списке игр.
         [Authorize(Roles = "Admin")]
         public IActionResult Search(string searchString, int? genreId)
         {
-            var games = _context.Games.Include(game => game.Genre).AsQueryable();
+            var games = _context.Games
+                .Include(game => game.Genre)
+                .AsQueryable();
 
             if (!string.IsNullOrEmpty(searchString))
             {
-                games = games.Where(game => game.Name.Contains(searchString) || (game.Genre != null && game.Genre.Name.Contains(searchString)));
+                games = games.Where(game =>
+                    game.Name.Contains(searchString) ||
+                    (game.Genre != null &&
+                     game.Genre.Name.Contains(searchString)));
             }
 
             if (genreId.HasValue)
             {
-                games = games.Where(game => game.GenreId == genreId.Value);
+                games = games.Where(game =>
+                    game.GenreId == genreId.Value);
             }
 
-            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name", genreId);
+            ViewBag.GenreId = new SelectList(
+                _context.Genres.OrderBy(genre => genre.Name),
+                "Id",
+                "Name",
+                genreId);
 
-            return View("Index", games.OrderBy(game => game.Name).ToList());
+            return View(
+                "Index",
+                games
+                    .OrderBy(game => game.Name)
+                    .ToList());
         }
 
-        // GET Games/Create
-        // Метод Create возвращает представление для создания новой игры. Он используется для отображения формы, где пользователь может ввести данные новой игры.
+        // GET: Games/Create
         [Authorize(Roles = "Admin")]
         public IActionResult Create()
         {
-            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name");
+            ViewBag.GenreId = new SelectList(
+                _context.Genres.OrderBy(genre => genre.Name),
+                "Id",
+                "Name");
 
             return View();
         }
 
         // GET: Games/Details/5
-        // Метод Details возвращает представление с подробной информацией о конкретной игре, идентифицируемой по ее ID.
-        // Если ID не указан или игра с таким ID не найдена, возвращается ошибка NotFound.
-        public async Task<IActionResult> Details(int? id, string? from)
+        public async Task<IActionResult> Details(
+            int? id,
+            string? from)
         {
             if (id == null)
             {
                 return NotFound();
             }
 
-            var games = _context.Games.Include(game => game.Genre).AsQueryable();
-
-            if (!User.IsInRole("Admin"))
-            {
-                games = games.Where(game => game.IsPublic);
-            }
-
-            var game = await games.FirstOrDefaultAsync(game => game.Id == id);
+            var game = await _context.Games
+                .Include(game => game.Genre)
+                .FirstOrDefaultAsync(game => game.Id == id);
 
             if (game == null)
             {
                 return NotFound();
             }
 
+            User? currentUser = null;
+
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                currentUser = await _userManager.GetUserAsync(User);
+            }
+
+            // Обычный пользователь не может открыть скрытую игру,
+            // если только он уже не владеет ею.
+            if (!game.IsPublic && !User.IsInRole("Admin"))
+            {
+                if (currentUser == null)
+                {
+                    return NotFound();
+                }
+
+                var ownsHiddenGame = await _context.LibraryGames
+                    .AnyAsync(libraryGame =>
+                        libraryGame.UserId == currentUser.Id &&
+                        libraryGame.GameId == game.Id);
+
+                if (!ownsHiddenGame)
+                {
+                    return NotFound();
+                }
+            }
+
             var reviews = await _context.Reviews
-            .Include(review => review.User)
-            .Where(review => review.GameId == game.Id)
-            .OrderByDescending(review => review.CreatedAt)
-            .ToListAsync();
+                .Include(review => review.User)
+                .Where(review => review.GameId == game.Id)
+                .OrderByDescending(review => review.CreatedAt)
+                .ToListAsync();
 
             ViewBag.Reviews = reviews;
             ViewBag.ReviewCount = reviews.Count;
+
             ViewBag.CanReview = false;
             ViewBag.CurrentUserId = null;
 
             ViewBag.IsInLibrary = false;
             ViewBag.IsInWishlist = false;
-            
-            if (User.Identity?.IsAuthenticated == true)
+
+            if (currentUser != null)
             {
-                var user = await _userManager.GetUserAsync(User);
+                ViewBag.CurrentUserId = currentUser.Id;
 
-                if (user != null)
-                {
-                    ViewBag.CurrentUserId = user.Id;
+                ViewBag.IsInLibrary = await _context.LibraryGames
+                    .AnyAsync(libraryGame =>
+                        libraryGame.UserId == currentUser.Id &&
+                        libraryGame.GameId == game.Id);
 
-                    ViewBag.IsInLibrary = await _context.LibraryGames
-                        .AnyAsync(libraryGame =>
-                            libraryGame.UserId == user.Id &&
-                            libraryGame.GameId == game.Id);
+                ViewBag.IsInWishlist = await _context.WishlistItems
+                    .AnyAsync(wishlistItem =>
+                        wishlistItem.UserId == currentUser.Id &&
+                        wishlistItem.GameId == game.Id);
 
-                    ViewBag.IsInWishlist = await _context.WishlistItems
-                        .AnyAsync(wishlistItem =>
-                            wishlistItem.UserId == user.Id &&
-                            wishlistItem.GameId == game.Id);
+                var alreadyReviewed = await _context.Reviews
+                    .AnyAsync(review =>
+                        review.UserId == currentUser.Id &&
+                        review.GameId == game.Id);
 
-                    var alreadyReviewed = await _context.Reviews
-                        .AnyAsync(review =>
-                            review.UserId == user.Id &&
-                            review.GameId == game.Id);
-
-                    ViewBag.CanReview = ViewBag.IsInLibrary == true && !alreadyReviewed;
-                }
+                ViewBag.CanReview =
+                    ViewBag.IsInLibrary == true &&
+                    !alreadyReviewed;
             }
 
             ViewBag.From = from;
@@ -167,31 +249,56 @@ namespace MiniSteam.Controllers
         }
 
         // POST: Games/Create
-        // Метод Create обрабатывает POST-запрос для создания новой игры. Он проверяет, является ли модель допустимой, добавляет игру в контекст базы данных и сохраняет изменения.
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Create(GameViewModel model)
+        public async Task<IActionResult> Create(
+            GameViewModel model)
         {
+            if (model.ImageFile != null &&
+                !IsValidImage(model.ImageFile))
+            {
+                ModelState.AddModelError(
+                    nameof(model.ImageFile),
+                    "Image must be JPG, JPEG, PNG or WEBP and no larger than 5 MB.");
+            }
+
             if (ModelState.IsValid)
             {
                 string? imageUrl = null;
 
-                if (model.ImageFile != null && model.ImageFile.Length > 0)
+                if (model.ImageFile != null &&
+                    model.ImageFile.Length > 0)
                 {
-                    var extension = Path.GetExtension(model.ImageFile.FileName);
-                    var fileName = $"{Guid.NewGuid()}{extension}";
+                    var extension = Path
+                        .GetExtension(model.ImageFile.FileName)
+                        .ToLowerInvariant();
 
-                    var folderPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", "games");
+                    var fileName =
+                        $"{Guid.NewGuid()}{extension}";
 
-                    var filePath = Path.Combine(folderPath, fileName);
+                    var folderPath = Path.Combine(
+                        _webHostEnvironment.WebRootPath,
+                        "images",
+                        "games");
 
-                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    Directory.CreateDirectory(folderPath);
+
+                    var filePath = Path.Combine(
+                        folderPath,
+                        fileName);
+
+                    using (var stream =
+                           new FileStream(
+                               filePath,
+                               FileMode.Create))
                     {
-                        await model.ImageFile.CopyToAsync(stream);
+                        await model.ImageFile
+                            .CopyToAsync(stream);
                     }
 
-                    imageUrl = $"/images/games/{fileName}";
+                    imageUrl =
+                        $"/images/games/{fileName}";
                 }
 
                 var game = new Game
@@ -208,17 +315,22 @@ namespace MiniSteam.Controllers
                 };
 
                 _context.Games.Add(game);
+
                 await _context.SaveChangesAsync();
+
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name", model.GenreId);
+            ViewBag.GenreId = new SelectList(
+                _context.Genres.OrderBy(genre => genre.Name),
+                "Id",
+                "Name",
+                model.GenreId);
 
             return View(model);
         }
 
-        // Edit: Games/Edit/5
-        // Метод Edit возвращает представление для редактирования существующей игры, идентифицируемой по ее ID. Если ID не указан или игра с таким ID не найдена, возвращается ошибка NotFound.
+        // GET: Games/Edit/5
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(int? id)
         {
@@ -248,22 +360,34 @@ namespace MiniSteam.Controllers
                 ExistingImageUrl = game.ImageUrl
             };
 
-            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name", game.GenreId);
+            ViewBag.GenreId = new SelectList(
+                _context.Genres.OrderBy(genre => genre.Name),
+                "Id",
+                "Name",
+                game.GenreId);
 
             return View(model);
         }
 
         // POST: Games/Edit/5
-        // Метод Edit обрабатывает POST-запрос для обновления существующей игры.
-        // Он проверяет, является ли модель допустимой, обновляет игру в контексте базы данных и сохраняет изменения.
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Edit(int id, GameViewModel model)
+        public async Task<IActionResult> Edit(
+    int id,
+    GameViewModel model)
         {
             if (id != model.Id)
             {
                 return NotFound();
+            }
+
+            if (model.ImageFile != null &&
+                !IsValidImage(model.ImageFile))
+            {
+                ModelState.AddModelError(
+                    nameof(model.ImageFile),
+                    "Image must be JPG, JPEG, PNG or WEBP and no larger than 5 MB.");
             }
 
             if (ModelState.IsValid)
@@ -284,53 +408,92 @@ namespace MiniSteam.Controllers
                 game.IsPublic = model.IsPublic;
                 game.GenreId = model.GenreId;
 
-                if (model.ImageFile != null && model.ImageFile.Length > 0)
+                string? oldImageUrlToDelete = null;
+                string? newImageFilePath = null;
+
+                if (model.ImageFile != null &&
+                    model.ImageFile.Length > 0)
                 {
-                    // Запоминаем старую картинку ДО изменения ImageUrl
-                    var oldImageUrl = game.ImageUrl;
+                    oldImageUrlToDelete = game.ImageUrl;
 
-                    var extension = Path.GetExtension(model.ImageFile.FileName);
-                    var fileName = $"{Guid.NewGuid()}{extension}";
+                    var extension = Path
+                        .GetExtension(model.ImageFile.FileName)
+                        .ToLowerInvariant();
 
-                    var folderPath = Path.Combine(_webHostEnvironment.WebRootPath,"images","games");
+                    var fileName =
+                        $"{Guid.NewGuid()}{extension}";
 
-                    var filePath = Path.Combine(folderPath, fileName);
+                    var folderPath = Path.Combine(
+                        _webHostEnvironment.WebRootPath,
+                        "images",
+                        "games");
 
-                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    Directory.CreateDirectory(folderPath);
+
+                    newImageFilePath = Path.Combine(
+                        folderPath,
+                        fileName);
+
+                    using (var stream = new FileStream(
+                        newImageFilePath,
+                        FileMode.Create))
                     {
                         await model.ImageFile.CopyToAsync(stream);
                     }
 
-                    // Новая картинка успешно сохранилась.
-                    // Теперь можно удалить старую.
-                    if (!string.IsNullOrEmpty(oldImageUrl))
-                    {
-                        var oldFileName = Path.GetFileName(oldImageUrl);
-
-                        var oldFilePath = Path.Combine(_webHostEnvironment.WebRootPath,"images","games",oldFileName);
-
-                        if (System.IO.File.Exists(oldFilePath))
-                        {
-                            System.IO.File.Delete(oldFilePath);
-                        }
-                    }
-
-                    game.ImageUrl = $"/images/games/{fileName}";
+                    game.ImageUrl =
+                        $"/images/games/{fileName}";
                 }
 
-                await _context.SaveChangesAsync();
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch
+                {
+                    // Если БД не сохранилась, удаляем только что загруженную
+                    // новую картинку, чтобы не оставлять лишний файл на диске.
+                    if (!string.IsNullOrEmpty(newImageFilePath) &&
+                        System.IO.File.Exists(newImageFilePath))
+                    {
+                        System.IO.File.Delete(newImageFilePath);
+                    }
+
+                    throw;
+                }
+
+                // Старую картинку удаляем только после успешного сохранения БД.
+                if (!string.IsNullOrEmpty(oldImageUrlToDelete) &&
+                    oldImageUrlToDelete.StartsWith("/images/games/"))
+                {
+                    var oldFileName =
+                        Path.GetFileName(oldImageUrlToDelete);
+
+                    var oldFilePath = Path.Combine(
+                        _webHostEnvironment.WebRootPath,
+                        "images",
+                        "games",
+                        oldFileName);
+
+                    if (System.IO.File.Exists(oldFilePath))
+                    {
+                        System.IO.File.Delete(oldFilePath);
+                    }
+                }
 
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewBag.GenreId = new SelectList(_context.Genres.OrderBy(genre => genre.Name), "Id", "Name", model.GenreId);
+            ViewBag.GenreId = new SelectList(
+                _context.Genres.OrderBy(genre => genre.Name),
+                "Id",
+                "Name",
+                model.GenreId);
 
             return View(model);
         }
 
         // GET: Games/Delete/5
-        // Метод Delete возвращает представление для подтверждения удаления игры, идентифицируемой по ее ID.
-        // Если ID не указан или игра с таким ID не найдена, возвращается ошибка NotFound.
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int? id)
         {
@@ -350,8 +513,6 @@ namespace MiniSteam.Controllers
         }
 
         // POST: Games/Delete/5
-        // Метод DeleteConfirmed обрабатывает POST-запрос для удаления игры, идентифицируемой по ее ID. Он ищет игру в контексте базы данных, удаляет ее и сохраняет изменения.
-        // Если игра не найдена, возвращается ошибка NotFound.
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
@@ -364,7 +525,7 @@ namespace MiniSteam.Controllers
                 return NotFound();
             }
 
-            // Запоминаем путь картинки до удаления игры
+            // Запоминаем путь картинки до удаления игры.
             var imageUrl = game.ImageUrl;
 
             _context.Games.Remove(game);
@@ -375,16 +536,19 @@ namespace MiniSteam.Controllers
             }
             catch (DbUpdateException)
             {
-                TempData["ErrorMessage"] = "This game cannot be deleted because it has purchase history.";
+                TempData["ErrorMessage"] =
+                    "This game cannot be deleted because it has purchase history.";
 
                 return RedirectToAction(nameof(Index));
             }
 
-            // Если у игры была загруженная локальная картинка — удаляем файл
+            // Удаляем локальный файл картинки
+            // только после успешного удаления игры из БД.
             if (!string.IsNullOrEmpty(imageUrl) &&
                 imageUrl.StartsWith("/images/games/"))
             {
-                var fileName = Path.GetFileName(imageUrl);
+                var fileName =
+                    Path.GetFileName(imageUrl);
 
                 var filePath = Path.Combine(
                     _webHostEnvironment.WebRootPath,

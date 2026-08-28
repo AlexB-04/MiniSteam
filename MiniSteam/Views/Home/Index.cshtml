@@ -1,8 +1,322 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Home";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="home-page">
+
+    <section class="home-hero">
+
+        <div class="home-hero-glow"></div>
+
+        <div class="home-hero-content">
+
+            <span class="home-eyebrow">
+                WELCOME TO MINISTEAM
+            </span>
+
+            <h1>
+                Your games.<br />
+                Your collection.
+            </h1>
+
+            <p>
+                Discover games, build your library, save favorites
+                and share your recommendations with the MiniSteam community.
+            </p>
+
+
+            <div class="home-hero-actions">
+
+                <a asp-controller="Games"
+                   asp-action="Store"
+                   class="home-primary-button">
+                    Browse the Store
+                </a>
+
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <a asp-controller="Library"
+                       asp-action="Index"
+                       class="home-secondary-button">
+                        Open My Library
+                    </a>
+                }
+                else
+                {
+                    <a asp-controller="Account"
+                       asp-action="Register"
+                       class="home-secondary-button">
+                        Create Account
+                    </a>
+                }
+
+            </div>
+
+        </div>
+
+
+        <div class="home-hero-visual">
+
+            <div class="home-logo-orbit home-logo-orbit-large"></div>
+            <div class="home-logo-orbit home-logo-orbit-small"></div>
+
+            <div class="home-main-logo">
+                M
+            </div>
+
+            <span class="home-logo-caption">
+                MINI<span>STEAM</span>
+            </span>
+
+        </div>
+
+    </section>
+
+
+    <section class="home-discover-section">
+
+        <div class="home-section-heading">
+
+            <div>
+                <span class="home-section-eyebrow">
+                    DISCOVER
+                </span>
+
+                <h2>Everything in one place</h2>
+            </div>
+
+            <a asp-controller="Games"
+               asp-action="Store"
+               class="home-section-link">
+                Explore Store →
+            </a>
+
+        </div>
+
+
+        <div class="home-feature-grid">
+
+            <a asp-controller="Games"
+               asp-action="Store"
+               class="home-feature-card">
+
+                <div class="home-feature-number">
+                    01
+                </div>
+
+                <div class="home-feature-icon">
+                    ◈
+                </div>
+
+                <h3>Browse Games</h3>
+
+                <p>
+                    Search the MiniSteam catalog by title or genre
+                    and discover games available in the Store.
+                </p>
+
+                <span class="home-feature-link">
+                    Open Store →
+                </span>
+
+            </a>
+
+
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a asp-controller="Library"
+                   asp-action="Index"
+                   class="home-feature-card">
+
+                    <div class="home-feature-number">
+                        02
+                    </div>
+
+                    <div class="home-feature-icon">
+                        ▣
+                    </div>
+
+                    <h3>Your Library</h3>
+
+                    <p>
+                        Access the games you own and quickly return
+                        to their MiniSteam store pages.
+                    </p>
+
+                    <span class="home-feature-link">
+                        View Library →
+                    </span>
+
+                </a>
+
+
+                <a asp-controller="Wishlist"
+                   asp-action="Index"
+                   class="home-feature-card">
+
+                    <div class="home-feature-number">
+                        03
+                    </div>
+
+                    <div class="home-feature-icon">
+                        ♡
+                    </div>
+
+                    <h3>Wishlist</h3>
+
+                    <p>
+                        Keep track of interesting games and return
+                        when you are ready to add them to your collection.
+                    </p>
+
+                    <span class="home-feature-link">
+                        View Wishlist →
+                    </span>
+
+                </a>
+            }
+            else
+            {
+                <a asp-controller="Account"
+                   asp-action="Register"
+                   class="home-feature-card">
+
+                    <div class="home-feature-number">
+                        02
+                    </div>
+
+                    <div class="home-feature-icon">
+                        +
+                    </div>
+
+                    <h3>Build a Library</h3>
+
+                    <p>
+                        Create a MiniSteam account and keep your purchased
+                        games together in your personal collection.
+                    </p>
+
+                    <span class="home-feature-link">
+                        Join MiniSteam →
+                    </span>
+
+                </a>
+
+
+                <a asp-controller="Account"
+                   asp-action="Login"
+                   class="home-feature-card">
+
+                    <div class="home-feature-number">
+                        03
+                    </div>
+
+                    <div class="home-feature-icon">
+                        M
+                    </div>
+
+                    <h3>Already a Member?</h3>
+
+                    <p>
+                        Sign in to access your library, wishlist,
+                        purchases and account settings.
+                    </p>
+
+                    <span class="home-feature-link">
+                        Sign In →
+                    </span>
+
+                </a>
+            }
+
+        </div>
+
+    </section>
+
+
+    <section class="home-community-section">
+
+        <div class="home-community-content">
+
+            <span class="home-section-eyebrow">
+                COMMUNITY
+            </span>
+
+            <h2>Share what you think</h2>
+
+            <p>
+                Owners can recommend or not recommend games
+                and publish reviews to help other MiniSteam users.
+            </p>
+
+            <a asp-controller="Games"
+               asp-action="Store"
+               class="home-community-button">
+                Discover Games
+            </a>
+
+        </div>
+
+
+        <div class="home-community-review">
+
+            <div class="home-community-review-header">
+
+                <div class="home-community-avatar">
+                    M
+                </div>
+
+                <div>
+                    <strong>MiniSteam Community</strong>
+                    <span>User Reviews</span>
+                </div>
+
+            </div>
+
+
+            <div class="home-community-verdict">
+
+                <span class="home-community-check">
+                    ✓
+                </span>
+
+                <div>
+                    <strong>Recommended</strong>
+                    <span>Share your experience with other players.</span>
+                </div>
+
+            </div>
+
+
+            <p>
+                “Your opinion becomes part of the game's community review score.”
+            </p>
+
+        </div>
+
+    </section>
+
+
+    <section class="home-final-section">
+
+        <div>
+            <span class="home-section-eyebrow">
+                MINISTEAM
+            </span>
+
+            <h2>Ready to explore?</h2>
+
+            <p>
+                Browse the catalog and find something for your library.
+            </p>
+        </div>
+
+        <a asp-controller="Games"
+           asp-action="Store"
+           class="home-primary-button">
+            Go to Store
+        </a>
+
+    </section>
+
 </div>

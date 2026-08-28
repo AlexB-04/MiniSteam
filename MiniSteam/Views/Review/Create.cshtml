@@ -1,43 +1,221 @@
-﻿@model MiniSteam.Models.Entities.Review
+﻿@model MiniSteam.Models.ViewModels.ReviewViewModel
 
 @{
     ViewData["Title"] = "Write Review";
 }
 
-<div class="genre-form-page">
-    <div class="genre-form-card">
+<div class="review-editor-page">
+
+    <div class="review-editor-navigation">
+        <a asp-controller="Games"
+           asp-action="Details"
+           asp-route-id="@Model.GameId">
+            ← Back to Game
+        </a>
+
+        <span>COMMUNITY REVIEW</span>
+    </div>
+
+
+    <div class="review-editor-heading">
+
+        <span class="review-editor-eyebrow">
+            COMMUNITY
+        </span>
+
         <h1>Write a Review</h1>
 
-        <form asp-action="Create" method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="GameId" />
+        <p>
+            Share your experience and help other MiniSteam users decide whether this game is right for them.
+        </p>
 
-            <div class="genre-form-group">
-                <label asp-for="Content">Review</label>
-                <textarea asp-for="Content" class="form-control" rows="6"></textarea>
-                <span asp-validation-for="Content" class="text-danger"></span>
-            </div>
-
-            <div class="genre-form-group">
-                <label>Do you recommend this game?</label>
-
-                <div>
-                    <input type="radio" asp-for="IsRecommended" value="true" id="recommended" />
-                    <label for="recommended">Recommended</label>
-                </div>
-
-                <div>
-                    <input type="radio" asp-for="IsRecommended" value="false" id="notRecommended" />
-                    <label for="notRecommended">Not Recommended</label>
-                </div>
-            </div>
-
-            <div class="genre-form-actions">
-                <button type="submit" class="btn btn-primary">Publish Review</button>
-                <a asp-controller="Games" asp-action="Details" asp-route-id="@Model.GameId" class="btn btn-secondary">Back to Game</a>
-            </div>
-        </form>
     </div>
+
+
+    <form asp-action="Create"
+          method="post"
+          class="review-editor-form">
+
+        <input type="hidden"
+               asp-for="GameId" />
+
+
+        <div asp-validation-summary="ModelOnly"
+             class="review-editor-validation">
+        </div>
+
+
+        <section class="review-editor-card">
+
+            <div class="review-editor-section-heading">
+
+                <span class="review-editor-section-number">
+                    01
+                </span>
+
+                <div>
+                    <h2>Your Review</h2>
+
+                    <p>
+                        Describe what you liked, disliked or found useful about the game.
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div class="review-editor-field">
+
+                <label asp-for="Content">
+                    Review
+                </label>
+
+                <textarea asp-for="Content"
+                          class="review-editor-textarea"
+                          rows="8"
+                          maxlength="2000"
+                          placeholder="Write your review..."></textarea>
+
+                <div class="review-editor-field-footer">
+
+                    <span asp-validation-for="Content"
+                          class="text-danger">
+                    </span>
+
+                    <span class="review-editor-limit">
+                        Maximum 2000 characters
+                    </span>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <section class="review-recommendation-card">
+
+            <div class="review-editor-section-heading">
+
+                <span class="review-editor-section-number">
+                    02
+                </span>
+
+                <div>
+                    <h2>Would You Recommend This Game?</h2>
+
+                    <p>
+                        Choose the recommendation that best reflects your experience.
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div class="review-choice-grid">
+
+                <label class="review-choice review-choice-positive">
+
+                    <input type="radio"
+                           asp-for="IsRecommended"
+                           value="true" />
+
+                    <span class="review-choice-box">
+
+                        <span class="review-choice-icon">
+                            ✓
+                        </span>
+
+                        <span class="review-choice-content">
+
+                            <strong>
+                                Recommended
+                            </strong>
+
+                            <small>
+                                I would recommend this game to other players.
+                            </small>
+
+                        </span>
+
+                    </span>
+
+                </label>
+
+
+                <label class="review-choice review-choice-negative">
+
+                    <input type="radio"
+                           asp-for="IsRecommended"
+                           value="false" />
+
+                    <span class="review-choice-box">
+
+                        <span class="review-choice-icon">
+                            ×
+                        </span>
+
+                        <span class="review-choice-content">
+
+                            <strong>
+                                Not Recommended
+                            </strong>
+
+                            <small>
+                                I would not recommend this game to other players.
+                            </small>
+
+                        </span>
+
+                    </span>
+
+                </label>
+
+                
+            </div>
+            <span asp-validation-for="IsRecommended" class="review-choice-validation"></span>
+        </section>
+
+
+        <div class="review-editor-note">
+
+            <span class="review-editor-note-icon">
+                i
+            </span>
+
+            <div>
+
+                <strong>
+                    Your review will be public
+                </strong>
+
+                <span>
+                    Other MiniSteam users will be able to read your review on the game's store page.
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="review-editor-actions">
+
+            <a asp-controller="Games"
+               asp-action="Details"
+               asp-route-id="@Model.GameId"
+               class="review-editor-cancel">
+                Cancel
+            </a>
+
+            <button type="submit"
+                    class="review-editor-publish">
+                Publish Review
+            </button>
+
+        </div>
+
+    </form>
+
 </div>
 
 @section Scripts {

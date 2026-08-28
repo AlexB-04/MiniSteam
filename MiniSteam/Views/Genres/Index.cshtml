@@ -1,49 +1,139 @@
 @model IEnumerable<MiniSteam.Models.Entities.Genre>
 
 @{
-    ViewData["Title"] = "Genres";
+    ViewData["Title"] = "Genre Management";
+
+    var genres = Model
+        .OrderBy(genre => genre.Name)
+        .ToList();
 }
 
-@if (TempData["ErrorMessage"] != null)
-{
-    <div class="alert alert-danger">
-        @TempData["ErrorMessage"]
-    </div>
-}
+<div class="genre-admin-page">
 
-<div class="genres-page">
-    <div class="genres-header">
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="admin-message admin-message-danger">
+            <span class="admin-message-icon">!</span>
+            <span>@TempData["ErrorMessage"]</span>
+        </div>
+    }
+
+    <div class="genre-admin-header">
+
         <div>
+            <span class="genre-admin-eyebrow">STORE TAXONOMY</span>
             <h1>Genre Management</h1>
-            <p>@Model.Count() genres</p>
+            <p>Manage the categories used to organize games in the MiniSteam Store.</p>
         </div>
 
-        <a asp-action="Create" class="admin-create-button">Add Genre</a>
+        <a asp-action="Create" class="genre-create-button">
+            <span>+</span>
+            Add Genre
+        </a>
+
     </div>
 
-    @if (!Model.Any())
+
+    <div class="genre-admin-summary">
+
+        <div class="genre-summary-card">
+            <span>TOTAL GENRES</span>
+            <strong>@genres.Count</strong>
+            <small>available categories</small>
+        </div>
+
+        <div class="genre-summary-info">
+            <span class="genre-summary-info-icon">i</span>
+
+            <div>
+                <strong>Store classification</strong>
+                <span>Genres are used when games are filtered and displayed in the MiniSteam Store.</span>
+            </div>
+        </div>
+
+    </div>
+
+
+    <div class="genre-list-heading">
+
+        <div>
+            <span>STORE CATEGORIES</span>
+            <h2>All Genres</h2>
+        </div>
+
+        <span>@genres.Count @(genres.Count == 1 ? "genre" : "genres")</span>
+
+    </div>
+
+
+    @if (!genres.Any())
     {
-        <div class="genres-empty">
-            <p>No genres found.</p>
+        <div class="genre-admin-empty">
+
+            <div class="genre-empty-icon">+</div>
+
+            <h3>No genres created</h3>
+
+            <p>Create a genre before assigning categories to games.</p>
+
+            <a asp-action="Create" class="genre-empty-button">Create First Genre</a>
+
         </div>
     }
     else
     {
-        <div class="genres-list">
-            @foreach (var item in Model)
+        <div class="genre-admin-list">
+
+            @foreach (var item in genres)
             {
-                <div class="genre-row">
-                    <div class="genre-name">
-                        <h2>@item.Name</h2>
+                <article class="genre-admin-row">
+
+                    <div class="genre-admin-symbol">
+                        <span>#</span>
                     </div>
 
-                    <div class="genre-actions">
-                        <a asp-action="Edit" asp-route-id="@item.Id" class="admin-edit-button">Edit</a>
-                        <a asp-action="Details" asp-route-id="@item.Id" class="admin-details-button">Details</a>
-                        <a asp-action="Delete" asp-route-id="@item.Id" class="admin-delete-button">Delete</a>
+
+                    <div class="genre-admin-info">
+
+                        <span class="genre-admin-id">
+                            GENRE ID @item.Id
+                        </span>
+
+                        <h2>@item.Name</h2>
+
+                        <span class="genre-admin-description">
+                            MiniSteam Store category
+                        </span>
+
                     </div>
-                </div>
+
+
+                    <div class="genre-admin-actions">
+
+                        <a asp-action="Details"
+                           asp-route-id="@item.Id"
+                           class="genre-view-button">
+                            View
+                        </a>
+
+                        <a asp-action="Edit"
+                           asp-route-id="@item.Id"
+                           class="genre-edit-button">
+                            Edit
+                        </a>
+
+                        <a asp-action="Delete"
+                           asp-route-id="@item.Id"
+                           class="genre-delete-button">
+                            Delete
+                        </a>
+
+                    </div>
+
+                </article>
             }
+
         </div>
     }
+
 </div>

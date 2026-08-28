@@ -1,82 +1,128 @@
 @model MiniSteam.Models.Entities.Game
 
 @{
-    ViewData["Title"] = "Delete";
+    ViewData["Title"] = "Delete Game";
 }
 
-<h1>Delete</h1>
+<div class="admin-delete-page">
 
-<h3>Are you sure you want to delete this?</h3>
-<div>
-    <h4>MiniSteam.Models.Entities.Game</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Name)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Name)
-        </dd>
-    </dl>
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Description)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Description)
-        </dd>
-    </dl>
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Price)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Price)
-        </dd>
-    </dl>
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.ReleaseDate)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.ReleaseDate)
-        </dd>
-    </dl>
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Developer)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Developer)
-        </dd>
-    </dl>
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Publisher)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Publisher)
-        </dd>
-    </dl>
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.ImageUrl)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.ImageUrl)
-        </dd>
-    </dl>
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.IsPublic)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.IsPublic)
-        </dd>
-    </dl>
-    <form asp-action="Delete">
-        <input type="hidden" asp-for="Id" />
-        <input type="submit" value="Delete" class="btn btn-danger" /> |
-        <a asp-action="Index">Back to List</a>
-    </form>
+    <div class="admin-form-navigation">
+        <a asp-action="Index">← Back to Game Management</a>
+        <span>GAME ID @Model.Id</span>
+    </div>
+
+
+    <div class="admin-delete-card">
+
+        <div class="admin-delete-warning-icon">!</div>
+
+        <span class="admin-delete-eyebrow">
+            DESTRUCTIVE ACTION
+        </span>
+
+        <h1>Delete Game?</h1>
+
+        <p class="admin-delete-description">
+            This will permanently remove this game from MiniSteam if it is not referenced by purchase history.
+        </p>
+
+
+        <div class="admin-delete-game">
+
+            <div class="admin-delete-image">
+
+                @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                {
+                    <img src="@Model.ImageUrl" alt="@Model.Name" />
+                }
+                else
+                {
+                    <img src="/images/noimage.jpg" alt="No image available" />
+                }
+
+            </div>
+
+
+            <div class="admin-delete-game-info">
+
+                <span class="admin-app-id">
+                    GAME ID @Model.Id
+                </span>
+
+                <h2>@Model.Name</h2>
+
+                <span>@Model.Developer</span>
+
+                <div class="admin-delete-meta">
+
+                    <div>
+                        <small>PRICE</small>
+
+                        @if (Model.Price == 0)
+                        {
+                            <strong class="admin-free-price">Free</strong>
+                        }
+                        else
+                        {
+                            <strong>@Model.Price.ToString("0.00") €</strong>
+                        }
+                    </div>
+
+                    <div>
+                        <small>RELEASE DATE</small>
+                        <strong>@Model.ReleaseDate.ToString("dd MMM yyyy")</strong>
+                    </div>
+
+                    <div>
+                        <small>STATUS</small>
+
+                        @if (Model.IsPublic)
+                        {
+                            <strong class="admin-delete-public">Public</strong>
+                        }
+                        else
+                        {
+                            <strong>Hidden</strong>
+                        }
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="admin-delete-warning">
+
+            <span class="admin-delete-warning-small">!</span>
+
+            <div>
+                <strong>This action cannot be undone</strong>
+
+                <span>
+                    Purchase history may prevent deletion if this game has already been purchased.
+                </span>
+            </div>
+
+        </div>
+
+
+        <form asp-action="Delete" method="post" class="admin-delete-actions">
+
+            <input type="hidden" asp-for="Id" />
+
+            <a asp-action="Index" class="admin-delete-cancel">
+                Cancel
+            </a>
+
+            <button type="submit" class="admin-delete-confirm">
+                Delete Game
+            </button>
+
+        </form>
+
+    </div>
+
 </div>

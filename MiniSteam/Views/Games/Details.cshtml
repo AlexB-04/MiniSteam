@@ -2,29 +2,65 @@
 
 @{
     ViewData["Title"] = Model.Name;
+
+    var reviews = ViewBag.Reviews as IEnumerable<MiniSteam.Models.Entities.Review>
+        ?? Enumerable.Empty<MiniSteam.Models.Entities.Review>();
+
+    var reviewList = reviews.ToList();
+    var reviewCount = reviewList.Count;
+    var recommendedCount = reviewList.Count(review => review.IsRecommended);
+
+    var recommendedPercent = reviewCount == 0
+        ? 0
+        : (int)Math.Round((double)recommendedCount / reviewCount * 100);
+
+    var isFree = Model.Price == 0;
 }
 
-<div class="game-details-page">
-    @if (ViewBag.From == "games")
-    {
-        <a asp-action="Index" class="game-details-back">← Back to Games</a>
-    }
-    else if (ViewBag.From == "library")
-    {
-        <a asp-controller="Library" asp-action="Index" class="game-details-back">← Back to Library</a>
-    }
-    else if (ViewBag.From == "wishlist")
-    {
-        <a asp-controller="Wishlist" asp-action="Index" class="game-details-back">← Back to Wishlist</a>
-    }
-    else
-    {
-        <a asp-action="Store" class="game-details-back">← Back to Store</a>
-    }
+<div class="game-details-page game-details-v2">
 
-    <h1 class="game-details-title">@Model.Name</h1>
+    <div class="game-details-navigation">
+        @if (ViewBag.From == "games")
+        {
+            <a asp-action="Index" class="game-details-back">← Back to Games</a>
+        }
+        else if (ViewBag.From == "library")
+        {
+            <a asp-controller="Library" asp-action="Index" class="game-details-back">← Back to Library</a>
+        }
+        else if (ViewBag.From == "wishlist")
+        {
+            <a asp-controller="Wishlist" asp-action="Index" class="game-details-back">← Back to Wishlist</a>
+        }
+        else
+        {
+            <a asp-action="Store" class="game-details-back">← Back to Store</a>
+        }
 
-    <div class="game-details-main">
+        <span class="game-details-store-label">MINISTEAM STORE</span>
+    </div>
+
+    <div class="game-details-heading">
+        <div>
+            <h1 class="game-details-title">@Model.Name</h1>
+
+            @if (Model.Genre != null)
+            {
+                <span class="game-details-genre-pill">@Model.Genre.Name</span>
+            }
+        </div>
+
+        @if (ViewBag.IsInLibrary == true)
+        {
+            <div class="game-owned-badge">
+                <span class="game-owned-check">✓</span>
+                <span>IN YOUR LIBRARY</span>
+            </div>
+        }
+    </div>
+
+    <div class="game-details-main game-details-hero">
+
         <div class="game-details-image">
             @if (!string.IsNullOrEmpty(Model.ImageUrl))
             {
@@ -32,128 +68,310 @@
             }
             else
             {
-                <img src="/images/noimage.jpg" alt="No image" />
+                <img src="/images/noimage.jpg" alt="No image available" />
             }
         </div>
 
         <div class="game-details-info">
-            <div class="game-details-property">
-                <span class="game-details-label">Genre</span>
-                <span>@(Model.Genre?.Name ?? "Unknown")</span>
+
+            <div class="game-details-summary">
+
+                @if (!string.IsNullOrWhiteSpace(Model.Description))
+                {
+                    <p>@Model.Description</p>
+                }
+                else
+                {
+                    <p>No description is currently available for this game.</p>
+                }
+
             </div>
 
-            <div class="game-details-property">
-                <span class="game-details-label">Developer</span>
-                <span>@Model.Developer</span>
-            </div>
+            <div class="game-details-meta">
 
-            <div class="game-details-property">
-                <span class="game-details-label">Publisher</span>
-                <span>@(Model.Publisher ?? "Unknown")</span>
-            </div>
+                <div class="game-details-property">
+                    <span class="game-details-label">Reviews</span>
 
-            <div class="game-details-property">
-                <span class="game-details-label">Release Date</span>
-                <span>@Model.ReleaseDate.ToString("dd MMM yyyy")</span>
-            </div>
-
-            <div class="game-details-price">
-                @Model.Price.ToString("0.00") €
-            </div>
-            @if (User.Identity?.IsAuthenticated == true)
-            {
-                <div class="game-details-actions">
-                    @if (ViewBag.IsInLibrary == true)
+                    @if (reviewCount > 0)
                     {
-                        <button type="button" class="btn btn-secondary" disabled>Already in Library</button>
+                        <span class="game-details-review-value">@recommendedPercent% Recommended</span>
+                        <span class="game-details-review-count">(@reviewCount)</span>
                     }
                     else
                     {
-                        <form asp-controller="Purchase" asp-action="Buy" asp-route-gameId="@Model.Id" method="post">
-                            <button type="submit" class="btn btn-primary">Buy for @Model.Price.ToString("0.00") €</button>
-                        </form>
+                        <span class="game-details-muted">No reviews yet</span>
+                    }
+                </div>
 
-                        @if (ViewBag.IsInWishlist == true)
+                <div class="game-details-property">
+                    <span class="game-details-label">Release Date</span>
+                    <span>@Model.ReleaseDate.ToString("dd MMM yyyy")</span>
+                </div>
+
+                <div class="game-details-property">
+                    <span class="game-details-label">Developer</span>
+                    <span class="game-details-link-value">@Model.Developer</span>
+                </div>
+
+                <div class="game-details-property">
+                    <span class="game-details-label">Publisher</span>
+                    <span class="game-details-link-value">@(Model.Publisher ?? "Unknown")</span>
+                </div>
+
+                <div class="game-details-property">
+                    <span class="game-details-label">Genre</span>
+                    <span>@(Model.Genre?.Name ?? "Unknown")</span>
+                </div>
+
+            </div>
+
+            <div class="game-purchase-panel">
+
+                <div class="game-purchase-top">
+                    <div>
+                        <span class="game-purchase-caption">
+                            @if (ViewBag.IsInLibrary == true)
+                            {
+                                <text>You own this game</text>
+                            }
+                            else if (isFree)
+                            {
+                                <text>Play @Model.Name</text>
+                            }
+                            else
+                            {
+                                <text>Buy @Model.Name</text>
+                            }
+                        </span>
+                    </div>
+
+                    <div class="game-purchase-price">
+                        @if (isFree)
                         {
-                            <button type="button" class="btn btn-secondary" disabled>In Wishlist</button>
+                            <span class="game-purchase-free">Free</span>
                         }
                         else
                         {
-                            <form asp-controller="Wishlist" asp-action="AddToWishlist" asp-route-gameId="@Model.Id" method="post">
-                                <button type="submit" class="btn btn-outline-primary">Add to Wishlist</button>
-                            </form>
+                            <span>@Model.Price.ToString("0.00") €</span>
                         }
-                    }
+                    </div>
                 </div>
+
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <div class="game-purchase-actions">
+
+                        @if (ViewBag.IsInLibrary == true)
+                        {
+                            <button type="button" class="game-owned-button" disabled>In Library</button>
+                        }
+                        else
+                        {
+                            <form asp-controller="Purchase" asp-action="Buy" asp-route-gameId="@Model.Id" method="post">
+                                @if (isFree)
+                                {
+                                    <button type="submit" class="game-buy-button">Get Game</button>
+                                }
+                                else
+                                {
+                                    <button type="submit" class="game-buy-button">Buy Now</button>
+                                }
+                            </form>
+
+                            @if (ViewBag.IsInWishlist == true)
+                            {
+                                <button type="button" class="game-wishlist-button game-wishlist-added" disabled>✓ In Wishlist</button>
+                            }
+                            else
+                            {
+                                <form asp-controller="Wishlist" asp-action="AddToWishlist" asp-route-gameId="@Model.Id" method="post">
+                                    <button type="submit" class="game-wishlist-button">Add to Wishlist</button>
+                                </form>
+                            }
+                        }
+
+                    </div>
+                }
+                else
+                {
+                    <div class="game-purchase-login">
+                        <a asp-controller="Account" asp-action="Login">Sign in</a>
+                        <span>to purchase this game or add it to your wishlist.</span>
+                    </div>
+                }
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <section class="game-about-section">
+
+        <div class="game-section-heading">
+            <div>
+                <span class="game-section-eyebrow">ABOUT</span>
+                <h2>About This Game</h2>
+            </div>
+        </div>
+
+        <div class="game-about-content">
+            @if (!string.IsNullOrWhiteSpace(Model.Description))
+            {
+                <p>@Model.Description</p>
+            }
+            else
+            {
+                <p>No description available.</p>
             }
         </div>
-    </div>
 
-    <div class="game-details-description">
-        <h2>About This Game</h2>
+    </section>
 
-        @if (!string.IsNullOrWhiteSpace(Model.Description))
-        {
-            <p>@Model.Description</p>
-        }
-        else
-        {
-            <p>No description available.</p>
-        }
-    </div>
 
-    <div class="game-reviews">
-        <div class="game-reviews-header">
-            <h2>User Reviews (@ViewBag.ReviewCount)</h2>
+    <section class="game-reviews game-reviews-v2">
+
+        <div class="game-section-heading game-review-section-heading">
+
+            <div>
+                <span class="game-section-eyebrow">COMMUNITY</span>
+                <h2>User Reviews</h2>
+            </div>
 
             @if (ViewBag.CanReview == true)
             {
-                <a asp-controller="Review" asp-action="Create" asp-route-gameId="@Model.Id" class="btn btn-primary">Write a Review</a>
+                <a asp-controller="Review" asp-action="Create" asp-route-gameId="@Model.Id" class="game-write-review-button">Write a Review</a>
             }
+
         </div>
 
-        @if (ViewBag.Reviews == null || !((IEnumerable<MiniSteam.Models.Entities.Review>)ViewBag.Reviews).Any())
+
+        <div class="game-review-summary">
+
+            <div class="game-review-summary-main">
+
+                @if (reviewCount == 0)
+                {
+                    <span class="game-review-summary-title game-review-summary-empty">No Reviews</span>
+                    <span class="game-review-summary-description">This game has not received any user reviews yet.</span>
+                }
+                else
+                {
+                    <span class="game-review-summary-title">@recommendedPercent% Recommended</span>
+                    <span class="game-review-summary-description">@recommendedCount of @reviewCount users recommend this game.</span>
+                }
+
+            </div>
+
+            <div class="game-review-summary-count">
+                <strong>@reviewCount</strong>
+                <span>@(reviewCount == 1 ? "review" : "reviews")</span>
+            </div>
+
+        </div>
+
+
+        @if (!reviewList.Any())
         {
-            <p class="game-reviews-empty">No reviews yet.</p>
+            <div class="game-reviews-empty game-reviews-empty-v2">
+                <div class="game-reviews-empty-icon">✎</div>
+                <h3>No reviews yet</h3>
+                <p>Owners of this game can share whether they recommend it.</p>
+            </div>
         }
         else
         {
-            @foreach (var review in (IEnumerable<MiniSteam.Models.Entities.Review>)ViewBag.Reviews)
-            {
-                <div class="review-card">
-                    <div class="review-card-header">
-                        @if (review.IsRecommended)
-                        {
-                            <span class="review-recommended">Recommended</span>
-                        }
-                        else
-                        {
-                            <span class="review-not-recommended">Not Recommended</span>
-                        }
+            <div class="game-review-list">
 
-                        <span class="review-user">@review.User.UserName</span>
-                    </div>
+                @foreach (var review in reviewList)
+                {
+                    <article class="review-card review-card-v2">
 
-                    <p class="review-content">@review.Content</p>
+                        <div class="review-card-side">
 
-                    <div class="review-date">
-                        @review.CreatedAt.ToString("dd MMM yyyy HH:mm")
+                            <div class="review-avatar">
+                                @if (ViewBag.CurrentUserId != null && review.UserId == ViewBag.CurrentUserId)
+                                {
+                                    <span>Y</span>
+                                }
+                                else
+                                {
+                                    <span>M</span>
+                                }
+                            </div>
 
-                        @if (review.UpdatedAt != null)
-                        {
-                            <span> · Edited @review.UpdatedAt.Value.ToString("dd MMM yyyy HH:mm")</span>
-                        }
-                    </div>
+                            @if (ViewBag.CurrentUserId != null && review.UserId == ViewBag.CurrentUserId)
+                            {
+                                <span class="review-user review-user-v2">You</span>
+                            }
+                            else
+                            {
+                                <span class="review-user review-user-v2">MiniSteam User</span>
+                            }
 
-                    @if (ViewBag.CurrentUserId != null && review.UserId == ViewBag.CurrentUserId)
-                    {
-                        <div class="review-actions">
-                            <a asp-controller="Review" asp-action="Edit" asp-route-id="@review.Id" class="btn btn-sm btn-primary">Edit</a>
-                            <a asp-controller="Review" asp-action="Delete" asp-route-id="@review.Id" class="btn btn-sm btn-danger">Delete</a>
                         </div>
-                    }
-                </div>
-            }
+
+                        <div class="review-card-body">
+
+                            <div class="review-card-header review-card-header-v2">
+
+                                @if (review.IsRecommended)
+                                {
+                                    <div class="review-verdict review-verdict-positive">
+                                        <span class="review-verdict-icon">✓</span>
+
+                                        <div>
+                                            <strong>Recommended</strong>
+                                            <span>Recommended this game</span>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="review-verdict review-verdict-negative">
+                                        <span class="review-verdict-icon">×</span>
+
+                                        <div>
+                                            <strong>Not Recommended</strong>
+                                            <span>Does not recommend this game</span>
+                                        </div>
+                                    </div>
+                                }
+
+                            </div>
+
+                            <p class="review-content">@review.Content</p>
+
+                            <div class="review-footer">
+
+                                <div class="review-date">
+                                    Posted @review.CreatedAt.ToString("dd MMM yyyy")
+
+                                    @if (review.UpdatedAt != null)
+                                    {
+                                        <span> · Edited @review.UpdatedAt.Value.ToString("dd MMM yyyy")</span>
+                                    }
+                                </div>
+
+                                @if (ViewBag.CurrentUserId != null && review.UserId == ViewBag.CurrentUserId)
+                                {
+                                    <div class="review-actions">
+                                        <a asp-controller="Review" asp-action="Edit" asp-route-id="@review.Id" class="review-edit-button">Edit</a>
+                                        <a asp-controller="Review" asp-action="Delete" asp-route-id="@review.Id" class="review-delete-button">Delete</a>
+                                    </div>
+                                }
+
+                            </div>
+
+                        </div>
+
+                    </article>
+                }
+
+            </div>
         }
-    </div>
+
+    </section>
+
 </div>

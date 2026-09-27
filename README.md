@@ -290,3 +290,6 @@ Password Recovery
 Game Administration
 Genre Administration
 Image Upload
+```
+
+The current development phase focuses on final cleanup, testing, interface consistency and project documentation.

@@ -6,6 +6,20 @@ The project was created to practice full-stack web development with ASP.NET Core
 
 MiniSteam is inspired by modern digital game storefronts, while using its own simplified functionality and interface.
 
+## Screenshots
+
+### Store
+
+![MiniSteam Store](screenshots/store.png)
+
+### Library
+
+![MiniSteam Library](screenshots/library.png)
+
+### Admin Game Management
+
+![MiniSteam Admin Game Management](screenshots/admin.png)
+
 ## Features
 
 ### Store
@@ -260,7 +274,9 @@ The project does not provide real commercial payment processing.
 
 ## Current Status
 
-MiniSteam v1 includes the primary functionality planned for the project:
+MiniSteam v1 is complete.
+
+The first version includes the primary functionality planned for the project:
 
 ```text
 Store
@@ -274,6 +290,3 @@ Password Recovery
 Game Administration
 Genre Administration
 Image Upload
-```
-
-The current development phase focuses on final cleanup, testing, interface consistency and project documentation.

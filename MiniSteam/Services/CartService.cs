@@ -23,6 +23,12 @@ namespace MiniSteam.Services
                 .ToListAsync();
         }
 
+        public async Task<int> GetCountAsync(string userId)
+        {
+            return await _context.CartItems
+                .CountAsync(cartItem => cartItem.UserId == userId);
+        }
+
         public async Task<List<int>> GetCartGameIdsAsync(
             string userId,
             IEnumerable<int> gameIds)

@@ -15,6 +15,18 @@
         : (int)Math.Round((double)recommendedCount / reviewCount * 100);
 
     var isFree = Model.Price == 0;
+
+    var screenshots = Model.Screenshots
+        .OrderBy(screenshot => screenshot.SortOrder)
+        .ToList();
+
+    var tags = Model.Tags
+        .OrderBy(tag => tag.Name)
+        .ToList();
+
+    var mainMediaUrl = screenshots.FirstOrDefault()?.Url
+        ?? Model.ImageUrl
+        ?? "/images/noimage.jpg";
 }
 
 <div class="game-details-page game-details-v2">
@@ -80,14 +92,24 @@
 
     <div class="game-details-main game-details-hero">
 
-        <div class="game-details-image">
-            @if (!string.IsNullOrEmpty(Model.ImageUrl))
+        <div class="game-media-column">
+            <div class="game-details-image game-feature-media @(screenshots.Any() ? "has-screenshots" : "cover-fallback")">
+                <img id="gameMainMedia" src="@mainMediaUrl" alt="@Model.Name" />
+            </div>
+
+            @if (screenshots.Any())
             {
-                <img src="@Model.ImageUrl" alt="@Model.Name" />
-            }
-            else
-            {
-                <img src="/images/noimage.jpg" alt="No image available" />
+                <div class="game-media-thumbnails" aria-label="Game screenshots">
+                    @foreach (var screenshot in screenshots)
+                    {
+                        <button type="button"
+                                class="game-media-thumbnail"
+                                data-media-url="@screenshot.Url"
+                                title="View screenshot">
+                            <img src="@screenshot.Url" alt="@Model.Name screenshot" />
+                        </button>
+                    }
+                </div>
             }
         </div>
 
@@ -144,6 +166,16 @@
 
             </div>
 
+            @if (tags.Any())
+            {
+                <div class="game-tag-list">
+                    @foreach (var tag in tags)
+                    {
+                        <span class="game-tag-pill">@tag.Name</span>
+                    }
+                </div>
+            }
+
             <div class="game-purchase-panel">
 
                 <div class="game-purchase-top">
@@ -169,9 +201,17 @@
                         {
                             <span class="game-purchase-free">Free</span>
                         }
+                        else if (Model.HasDiscount)
+                        {
+                            <div class="game-discount-price">
+                                <span class="game-discount-badge">-@Model.DiscountPercent%</span>
+                                <span class="game-original-price">@Model.Price.ToString("0.00") €</span>
+                                <span class="game-final-price">@Model.FinalPrice.ToString("0.00") €</span>
+                            </div>
+                        }
                         else
                         {
-                            <span>@Model.Price.ToString("0.00") €</span>
+                            <span>@Model.FinalPrice.ToString("0.00") €</span>
                         }
                     </div>
                 </div>
@@ -257,6 +297,32 @@
         </div>
 
     </section>
+
+
+    @if (!string.IsNullOrWhiteSpace(Model.MinimumSystemRequirements) ||
+         !string.IsNullOrWhiteSpace(Model.RecommendedSystemRequirements))
+    {
+        <section class="game-system-section">
+            <div class="game-section-heading">
+                <div>
+                    <span class="game-section-eyebrow">PC</span>
+                    <h2>System Requirements</h2>
+                </div>
+            </div>
+
+            <div class="game-system-grid">
+                <div class="game-system-card">
+                    <span>MINIMUM</span>
+                    <p>@(Model.MinimumSystemRequirements ?? "Not specified.")</p>
+                </div>
+
+                <div class="game-system-card">
+                    <span>RECOMMENDED</span>
+                    <p>@(Model.RecommendedSystemRequirements ?? "Not specified.")</p>
+                </div>
+            </div>
+        </section>
+    }
 
 
     <section class="game-reviews game-reviews-v2">
@@ -404,3 +470,23 @@
     </section>
 
 </div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll(".game-media-thumbnail").forEach(button => {
+            button.addEventListener("click", () => {
+                const url = button.dataset.mediaUrl;
+                const mainMedia = document.getElementById("gameMainMedia");
+
+                if (url && mainMedia) {
+                    mainMedia.src = url;
+
+                    document.querySelectorAll(".game-media-thumbnail")
+                        .forEach(item => item.classList.remove("active"));
+
+                    button.classList.add("active");
+                }
+            });
+        });
+    </script>
+}

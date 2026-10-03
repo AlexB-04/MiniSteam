@@ -127,6 +127,71 @@
 
                     </div>
 
+
+                    <div class="admin-field">
+                        <label asp-for="DiscountPercent">Discount</label>
+
+                        <div class="admin-price-input">
+                            <input asp-for="DiscountPercent" class="admin-form-input" min="0" max="95" />
+                            <span>%</span>
+                        </div>
+
+                        <span asp-validation-for="DiscountPercent" class="text-danger"></span>
+                        <small>Use 0 for no discount. Free games ignore discounts.</small>
+                    </div>
+
+                </section>
+
+
+                <section class="admin-form-section admin-store-experience-section">
+                    <div class="admin-form-section-heading">
+                        <span class="admin-form-section-number">03</span>
+
+                        <div>
+                            <h2>Store Experience</h2>
+                            <p>Tags, screenshots and richer information for the game page.</p>
+                        </div>
+                    </div>
+
+                    <div class="admin-field">
+                        <label asp-for="TagsText">Tags</label>
+                        <input asp-for="TagsText" class="admin-form-input" placeholder="Indie, Adventure, Atmospheric" />
+                        <span asp-validation-for="TagsText" class="text-danger"></span>
+                        <small>Separate tags with commas. Maximum 20 tags.</small>
+                    </div>
+
+                    <div class="admin-field">
+                        <label asp-for="ScreenshotUrlsText">Screenshot URLs</label>
+                        <textarea asp-for="ScreenshotUrlsText" class="admin-form-input admin-form-textarea" rows="6" placeholder="https://example.com/screenshot-1.jpg&#10;https://example.com/screenshot-2.jpg"></textarea>
+                        <span asp-validation-for="ScreenshotUrlsText" class="text-danger"></span>
+                        <small>One URL per line. HTTP/HTTPS or a local /images/... path. Maximum 12.</small>
+                    </div>
+                </section>
+
+
+                <section class="admin-form-section admin-system-requirements-section">
+                    <div class="admin-form-section-heading">
+                        <span class="admin-form-section-number">04</span>
+
+                        <div>
+                            <h2>System Requirements</h2>
+                            <p>Optional PC requirements shown on the store page.</p>
+                        </div>
+                    </div>
+
+                    <div class="admin-field-grid">
+                        <div class="admin-field">
+                            <label asp-for="MinimumSystemRequirements">Minimum</label>
+                            <textarea asp-for="MinimumSystemRequirements" class="admin-form-input admin-form-textarea" rows="8" placeholder="OS: Windows 10&#10;Processor: ...&#10;Memory: ..."></textarea>
+                            <span asp-validation-for="MinimumSystemRequirements" class="text-danger"></span>
+                        </div>
+
+                        <div class="admin-field">
+                            <label asp-for="RecommendedSystemRequirements">Recommended</label>
+                            <textarea asp-for="RecommendedSystemRequirements" class="admin-form-input admin-form-textarea" rows="8" placeholder="OS: Windows 11&#10;Processor: ...&#10;Memory: ..."></textarea>
+                            <span asp-validation-for="RecommendedSystemRequirements" class="text-danger"></span>
+                        </div>
+                    </div>
                 </section>
 
             </div>

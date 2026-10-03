@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace MiniSteam.Models.DTOs
 {
@@ -15,6 +15,9 @@ namespace MiniSteam.Models.DTOs
             ErrorMessage = "Price must be between 0 and 9999.99.")]
         public decimal Price { get; set; }
 
+        [Range(0, 95)]
+        public int DiscountPercent { get; set; }
+
         [DataType(DataType.Date)]
         public DateTime ReleaseDate { get; set; }
 
@@ -28,5 +31,15 @@ namespace MiniSteam.Models.DTOs
         public int? GenreId { get; set; }
 
         public bool IsPublic { get; set; }
+
+        public List<string> Tags { get; set; } = new();
+
+        public List<string> Screenshots { get; set; } = new();
+
+        [StringLength(4000)]
+        public string? MinimumSystemRequirements { get; set; }
+
+        [StringLength(4000)]
+        public string? RecommendedSystemRequirements { get; set; }
     }
 }

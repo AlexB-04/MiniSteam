@@ -4,6 +4,8 @@ namespace MiniSteam.Models.DTOs
     {
         public int GameId { get; set; }
         public string Name { get; set; } = string.Empty;
+        public decimal OriginalPrice { get; set; }
+        public int DiscountPercent { get; set; }
         public decimal Price { get; set; }
         public string? ImageUrl { get; set; }
         public string Developer { get; set; } = string.Empty;

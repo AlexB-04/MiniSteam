@@ -106,7 +106,7 @@ namespace MiniSteam.Controllers.API
         }
 
         [HttpPost("checkout")]
-        public async Task<IActionResult> Checkout()
+        public async Task<IActionResult> CheckoutCart()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -133,7 +133,9 @@ namespace MiniSteam.Controllers.API
             {
                 GameId = cartItem.GameId,
                 Name = cartItem.Game.Name,
-                Price = cartItem.Game.Price,
+                OriginalPrice = cartItem.Game.Price,
+                DiscountPercent = cartItem.Game.DiscountPercent,
+                Price = cartItem.Game.FinalPrice,
                 ImageUrl = cartItem.Game.ImageUrl,
                 GenreName = cartItem.Game.Genre?.Name,
                 AddedAt = cartItem.AddedAt

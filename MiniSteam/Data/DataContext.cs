@@ -26,6 +26,10 @@ namespace MiniSteam.Data
 
         public DbSet<CartItem> CartItems { get; set; }
 
+        public DbSet<Tag> Tags { get; set; }
+
+        public DbSet<GameScreenshot> GameScreenshots { get; set; }
+
         // Конструктор класса DataContext, который принимает параметры конфигурации DbContextOptions и передает их базовому классу DbContext.
         // Это позволяет настроить контекст базы данных, например, указать строку подключения к базе данных.
         public DataContext(DbContextOptions<DataContext> options) : base(options)
@@ -64,6 +68,40 @@ namespace MiniSteam.Data
             modelBuilder.Entity<CartItem>()
                 .HasIndex(cartItem => new { cartItem.UserId, cartItem.GameId })
                 .IsUnique();
+
+            modelBuilder.Entity<Tag>()
+                .HasIndex(tag => tag.Name)
+                .IsUnique();
+
+            modelBuilder.Entity<Game>()
+                .HasMany(game => game.Tags)
+                .WithMany(tag => tag.Games)
+                .UsingEntity<Dictionary<string, object>>(
+                    "GameTags",
+                    right => right
+                        .HasOne<Tag>()
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade),
+                    left => left
+                        .HasOne<Game>()
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade),
+                    join =>
+                    {
+                        join.HasKey("GameId", "TagId");
+                        join.ToTable("GameTags");
+                    });
+
+            modelBuilder.Entity<GameScreenshot>()
+                .HasOne(screenshot => screenshot.Game)
+                .WithMany(game => game.Screenshots)
+                .HasForeignKey(screenshot => screenshot.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<GameScreenshot>()
+                .HasIndex(screenshot => new { screenshot.GameId, screenshot.SortOrder });
 
         }
     }

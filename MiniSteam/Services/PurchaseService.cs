@@ -68,14 +68,14 @@ namespace MiniSteam.Services
             var purchase = new Purchase
             {
                 UserId = userId,
-                TotalPrice = game.Price
+                TotalPrice = game.FinalPrice
             };
 
             purchase.PurchaseItems.Add(new PurchaseItem
             {
                 GameId = game.Id,
                 Game = game,
-                Price = game.Price
+                Price = game.FinalPrice
             });
 
             _context.LibraryGames.Add(new LibraryGame
@@ -153,7 +153,7 @@ namespace MiniSteam.Services
             var purchase = new Purchase
             {
                 UserId = userId,
-                TotalPrice = cartItems.Sum(cartItem => cartItem.Game.Price)
+                TotalPrice = cartItems.Sum(cartItem => cartItem.Game.FinalPrice)
             };
 
             foreach (var cartItem in cartItems)
@@ -162,7 +162,7 @@ namespace MiniSteam.Services
                 {
                     GameId = cartItem.GameId,
                     Game = cartItem.Game,
-                    Price = cartItem.Game.Price
+                    Price = cartItem.Game.FinalPrice
                 });
 
                 _context.LibraryGames.Add(new LibraryGame

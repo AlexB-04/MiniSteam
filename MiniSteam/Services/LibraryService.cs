@@ -18,6 +18,10 @@ namespace MiniSteam.Services
             return await _context.LibraryGames
                 .Include(libraryGame => libraryGame.Game)
                 .ThenInclude(game => game.Genre)
+                .Include(libraryGame => libraryGame.Game)
+                .ThenInclude(game => game.Tags)
+                .Include(libraryGame => libraryGame.Game)
+                .ThenInclude(game => game.Screenshots)
                 .Where(libraryGame => libraryGame.UserId == userId)
                 .OrderByDescending(libraryGame => libraryGame.AddedAt)
                 .ToListAsync();

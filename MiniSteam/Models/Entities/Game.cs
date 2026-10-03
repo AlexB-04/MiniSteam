@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MiniSteam.Models.Entities
@@ -19,6 +19,9 @@ namespace MiniSteam.Models.Entities
             ErrorMessage = "Price must be between 0 and 9999.99.")]
         public decimal Price { get; set; }
 
+        [Range(0, 95, ErrorMessage = "Discount must be between 0 and 95 percent.")]
+        public int DiscountPercent { get; set; }
+
         [DataType(DataType.Date)]
         public DateTime ReleaseDate { get; set; }
 
@@ -36,5 +39,35 @@ namespace MiniSteam.Models.Entities
         public int? GenreId { get; set; }
 
         public Genre? Genre { get; set; }
+
+        [StringLength(4000)]
+        public string? MinimumSystemRequirements { get; set; }
+
+        [StringLength(4000)]
+        public string? RecommendedSystemRequirements { get; set; }
+
+        public ICollection<Tag> Tags { get; set; } = new List<Tag>();
+
+        public ICollection<GameScreenshot> Screenshots { get; set; } = new List<GameScreenshot>();
+
+        [NotMapped]
+        public bool HasDiscount => Price > 0 && DiscountPercent > 0;
+
+        [NotMapped]
+        public decimal FinalPrice
+        {
+            get
+            {
+                if (!HasDiscount)
+                {
+                    return Price;
+                }
+
+                return Math.Round(
+                    Price * (100 - DiscountPercent) / 100m,
+                    2,
+                    MidpointRounding.AwayFromZero);
+            }
+        }
     }
 }

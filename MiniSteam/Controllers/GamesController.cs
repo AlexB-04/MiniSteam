@@ -31,6 +31,8 @@ namespace MiniSteam.Controllers
         };
 
         private const long MaxImageSize = 5 * 1024 * 1024;
+        private const int MaxTags = 20;
+        private const int MaxScreenshots = 12;
 
         public GamesController(
             DataContext context,
@@ -42,7 +44,6 @@ namespace MiniSteam.Controllers
             _userManager = userManager;
         }
 
-        // Проверяет тип, расширение и размер загруженной картинки.
         private bool IsValidImage(IFormFile file)
         {
             var extension = Path
@@ -58,15 +59,194 @@ namespace MiniSteam.Controllers
                 && file.Length <= MaxImageSize;
         }
 
-        // GET: Games
-        // Административный список всех игр.
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Index()
+        private void LoadGenreList(int? selectedGenreId = null)
         {
             ViewBag.GenreId = new SelectList(
                 _context.Genres.OrderBy(genre => genre.Name),
                 "Id",
-                "Name");
+                "Name",
+                selectedGenreId);
+        }
+
+        private void ValidateStoreContent(GameViewModel model)
+        {
+            var tagNames = ParseTags(model.TagsText);
+            var screenshotUrls = ParseScreenshotUrls(model.ScreenshotUrlsText);
+
+            if (tagNames.Count > MaxTags)
+            {
+                ModelState.AddModelError(
+                    nameof(model.TagsText),
+                    $"A game can have up to {MaxTags} tags.");
+            }
+
+            if (tagNames.Any(tag => tag.Length > 50))
+            {
+                ModelState.AddModelError(
+                    nameof(model.TagsText),
+                    "Each tag can contain up to 50 characters.");
+            }
+
+            if (screenshotUrls.Count > MaxScreenshots)
+            {
+                ModelState.AddModelError(
+                    nameof(model.ScreenshotUrlsText),
+                    $"A game can have up to {MaxScreenshots} screenshots.");
+            }
+
+            if (screenshotUrls.Any(url => url.Length > 500 || !IsValidScreenshotUrl(url)))
+            {
+                ModelState.AddModelError(
+                    nameof(model.ScreenshotUrlsText),
+                    "Each screenshot must be an http/https URL or a local path beginning with '/'.");
+            }
+        }
+
+        private static List<string> ParseTags(string? tagsText)
+        {
+            if (string.IsNullOrWhiteSpace(tagsText))
+            {
+                return new List<string>();
+            }
+
+            return tagsText
+                .Split(new[] { ',', ';', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(tag => tag.Trim())
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private static List<string> ParseScreenshotUrls(string? screenshotUrlsText)
+        {
+            if (string.IsNullOrWhiteSpace(screenshotUrlsText))
+            {
+                return new List<string>();
+            }
+
+            return screenshotUrlsText
+                .Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(url => url.Trim())
+                .Where(url => !string.IsNullOrWhiteSpace(url))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private static bool IsValidScreenshotUrl(string url)
+        {
+            if (url.StartsWith('/'))
+            {
+                return true;
+            }
+
+            return Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+        }
+
+        private async Task ApplyStoreContentAsync(
+            Game game,
+            IReadOnlyCollection<string> tagNames,
+            IReadOnlyCollection<string> screenshotUrls)
+        {
+            var tagNameList = tagNames.ToList();
+
+            var existingTags = tagNameList.Count == 0
+                ? new List<Tag>()
+                : await _context.Tags
+                    .Where(tag => tagNameList.Contains(tag.Name))
+                    .ToListAsync();
+
+            game.Tags.Clear();
+
+            foreach (var tagName in tagNameList)
+            {
+                var tag = existingTags.FirstOrDefault(existingTag =>
+                    string.Equals(existingTag.Name, tagName, StringComparison.OrdinalIgnoreCase));
+
+                if (tag == null)
+                {
+                    tag = new Tag
+                    {
+                        Name = tagName
+                    };
+
+                    _context.Tags.Add(tag);
+                    existingTags.Add(tag);
+                }
+
+                game.Tags.Add(tag);
+            }
+
+            if (game.Screenshots.Count > 0)
+            {
+                _context.GameScreenshots.RemoveRange(game.Screenshots.ToList());
+                game.Screenshots.Clear();
+            }
+
+            var sortOrder = 0;
+
+            foreach (var screenshotUrl in screenshotUrls)
+            {
+                game.Screenshots.Add(new GameScreenshot
+                {
+                    Url = screenshotUrl,
+                    SortOrder = sortOrder++
+                });
+            }
+        }
+
+        private async Task<string> SaveImageAsync(IFormFile imageFile)
+        {
+            var extension = Path
+                .GetExtension(imageFile.FileName)
+                .ToLowerInvariant();
+
+            var fileName = $"{Guid.NewGuid()}{extension}";
+
+            var folderPath = Path.Combine(
+                _webHostEnvironment.WebRootPath,
+                "images",
+                "games");
+
+            Directory.CreateDirectory(folderPath);
+
+            var filePath = Path.Combine(
+                folderPath,
+                fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await imageFile.CopyToAsync(stream);
+            }
+
+            return $"/images/games/{fileName}";
+        }
+
+        private void DeleteLocalGameImage(string? imageUrl)
+        {
+            if (string.IsNullOrEmpty(imageUrl) ||
+                !imageUrl.StartsWith("/images/games/", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            var fileName = Path.GetFileName(imageUrl);
+            var filePath = Path.Combine(
+                _webHostEnvironment.WebRootPath,
+                "images",
+                "games",
+                fileName);
+
+            if (System.IO.File.Exists(filePath))
+            {
+                System.IO.File.Delete(filePath);
+            }
+        }
+
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Index()
+        {
+            LoadGenreList();
 
             var games = await _context.Games
                 .Include(game => game.Genre)
@@ -76,92 +256,82 @@ namespace MiniSteam.Controllers
             return View(games);
         }
 
-        // GET: Games/Store
-        // Публичный магазин. Показываются только опубликованные игры.
-        public IActionResult Store(string? searchString, int? genreId)
+        public async Task<IActionResult> Store(string? searchString, int? genreId)
         {
             var games = _context.Games
                 .Include(game => game.Genre)
-                .Where(game => game.IsPublic);
-
-            if (!string.IsNullOrEmpty(searchString))
-            {
-                games = games.Where(game =>
-                    game.Name.Contains(searchString) ||
-                    (game.Genre != null &&
-                     game.Genre.Name.Contains(searchString)));
-            }
-
-            if (genreId.HasValue)
-            {
-                games = games.Where(game =>
-                    game.GenreId == genreId.Value);
-            }
-
-            ViewBag.GenreId = new SelectList(
-                _context.Genres.OrderBy(genre => genre.Name),
-                "Id",
-                "Name",
-                genreId);
-
-            return View(
-                games
-                    .OrderBy(game => game.Name)
-                    .ToList());
-        }
-
-        // GET: Games/Search
-        // Поиск в административном списке игр.
-        [Authorize(Roles = "Admin")]
-        public IActionResult Search(string searchString, int? genreId)
-        {
-            var games = _context.Games
-                .Include(game => game.Genre)
+                .Include(game => game.Tags)
+                .Where(game => game.IsPublic)
                 .AsQueryable();
 
-            if (!string.IsNullOrEmpty(searchString))
+            if (!string.IsNullOrWhiteSpace(searchString))
             {
+                var search = searchString.Trim();
+
                 games = games.Where(game =>
-                    game.Name.Contains(searchString) ||
-                    (game.Genre != null &&
-                     game.Genre.Name.Contains(searchString)));
+                    game.Name.Contains(search) ||
+                    game.Developer.Contains(search) ||
+                    (game.Publisher != null && game.Publisher.Contains(search)) ||
+                    (game.Genre != null && game.Genre.Name.Contains(search)) ||
+                    game.Tags.Any(tag => tag.Name.Contains(search)));
             }
 
             if (genreId.HasValue)
             {
-                games = games.Where(game =>
-                    game.GenreId == genreId.Value);
+                games = games.Where(game => game.GenreId == genreId.Value);
             }
 
-            ViewBag.GenreId = new SelectList(
-                _context.Genres.OrderBy(genre => genre.Name),
-                "Id",
-                "Name",
-                genreId);
+            LoadGenreList(genreId);
+
+            return View(await games
+                .OrderBy(game => game.Name)
+                .ToListAsync());
+        }
+
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Search(string searchString, int? genreId)
+        {
+            var games = _context.Games
+                .Include(game => game.Genre)
+                .Include(game => game.Tags)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchString))
+            {
+                var search = searchString.Trim();
+
+                games = games.Where(game =>
+                    game.Name.Contains(search) ||
+                    game.Developer.Contains(search) ||
+                    (game.Publisher != null && game.Publisher.Contains(search)) ||
+                    (game.Genre != null && game.Genre.Name.Contains(search)) ||
+                    game.Tags.Any(tag => tag.Name.Contains(search)));
+            }
+
+            if (genreId.HasValue)
+            {
+                games = games.Where(game => game.GenreId == genreId.Value);
+            }
+
+            LoadGenreList(genreId);
 
             return View(
                 "Index",
-                games
-                    .OrderBy(game => game.Name)
-                    .ToList());
+                await games.OrderBy(game => game.Name).ToListAsync());
         }
 
-        // GET: Games/Create
         [Authorize(Roles = "Admin")]
         public IActionResult Create()
         {
-            ViewBag.GenreId = new SelectList(
-                _context.Genres.OrderBy(genre => genre.Name),
-                "Id",
-                "Name");
+            LoadGenreList();
 
-            return View();
+            return View(new GameViewModel
+            {
+                ReleaseDate = DateTime.Today
+            });
         }
 
-        // GET: Games/Details/5
-        public async Task<IActionResult> Details(
-            int? id,
-            string? from)
+        public async Task<IActionResult> Details(int? id, string? from)
         {
             if (id == null)
             {
@@ -170,6 +340,8 @@ namespace MiniSteam.Controllers
 
             var game = await _context.Games
                 .Include(game => game.Genre)
+                .Include(game => game.Tags)
+                .Include(game => game.Screenshots)
                 .FirstOrDefaultAsync(game => game.Id == id);
 
             if (game == null)
@@ -184,8 +356,6 @@ namespace MiniSteam.Controllers
                 currentUser = await _userManager.GetUserAsync(User);
             }
 
-            // Обычный пользователь не может открыть скрытую игру,
-            // если только он уже не владеет ею.
             if (!game.IsPublic && !User.IsInRole("Admin"))
             {
                 if (currentUser == null)
@@ -212,10 +382,8 @@ namespace MiniSteam.Controllers
 
             ViewBag.Reviews = reviews;
             ViewBag.ReviewCount = reviews.Count;
-
             ViewBag.CanReview = false;
             ViewBag.CurrentUserId = null;
-
             ViewBag.IsInLibrary = false;
             ViewBag.IsInWishlist = false;
             ViewBag.IsInCart = false;
@@ -254,89 +422,69 @@ namespace MiniSteam.Controllers
             return View(game);
         }
 
-        // POST: Games/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Create(
-            GameViewModel model)
+        public async Task<IActionResult> Create(GameViewModel model)
         {
-            if (model.ImageFile != null &&
-                !IsValidImage(model.ImageFile))
+            if (model.ImageFile != null && !IsValidImage(model.ImageFile))
             {
                 ModelState.AddModelError(
                     nameof(model.ImageFile),
                     "Image must be JPG, JPEG, PNG or WEBP and no larger than 5 MB.");
             }
 
+            ValidateStoreContent(model);
+
             if (ModelState.IsValid)
             {
                 string? imageUrl = null;
 
-                if (model.ImageFile != null &&
-                    model.ImageFile.Length > 0)
+                if (model.ImageFile != null && model.ImageFile.Length > 0)
                 {
-                    var extension = Path
-                        .GetExtension(model.ImageFile.FileName)
-                        .ToLowerInvariant();
-
-                    var fileName =
-                        $"{Guid.NewGuid()}{extension}";
-
-                    var folderPath = Path.Combine(
-                        _webHostEnvironment.WebRootPath,
-                        "images",
-                        "games");
-
-                    Directory.CreateDirectory(folderPath);
-
-                    var filePath = Path.Combine(
-                        folderPath,
-                        fileName);
-
-                    using (var stream =
-                           new FileStream(
-                               filePath,
-                               FileMode.Create))
-                    {
-                        await model.ImageFile
-                            .CopyToAsync(stream);
-                    }
-
-                    imageUrl =
-                        $"/images/games/{fileName}";
+                    imageUrl = await SaveImageAsync(model.ImageFile);
                 }
 
                 var game = new Game
                 {
-                    Name = model.Name,
-                    Description = model.Description,
+                    Name = model.Name.Trim(),
+                    Description = model.Description?.Trim(),
                     Price = model.Price,
+                    DiscountPercent = model.Price == 0 ? 0 : model.DiscountPercent,
                     ReleaseDate = model.ReleaseDate,
-                    Developer = model.Developer,
-                    Publisher = model.Publisher,
+                    Developer = model.Developer.Trim(),
+                    Publisher = model.Publisher?.Trim(),
                     IsPublic = model.IsPublic,
                     GenreId = model.GenreId,
-                    ImageUrl = imageUrl
+                    ImageUrl = imageUrl,
+                    MinimumSystemRequirements = model.MinimumSystemRequirements?.Trim(),
+                    RecommendedSystemRequirements = model.RecommendedSystemRequirements?.Trim()
                 };
 
                 _context.Games.Add(game);
 
-                await _context.SaveChangesAsync();
+                await ApplyStoreContentAsync(
+                    game,
+                    ParseTags(model.TagsText),
+                    ParseScreenshotUrls(model.ScreenshotUrlsText));
+
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch
+                {
+                    DeleteLocalGameImage(imageUrl);
+                    throw;
+                }
 
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewBag.GenreId = new SelectList(
-                _context.Genres.OrderBy(genre => genre.Name),
-                "Id",
-                "Name",
-                model.GenreId);
-
+            LoadGenreList(model.GenreId);
             return View(model);
         }
 
-        // GET: Games/Edit/5
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(int? id)
         {
@@ -345,7 +493,10 @@ namespace MiniSteam.Controllers
                 return NotFound();
             }
 
-            var game = await _context.Games.FindAsync(id);
+            var game = await _context.Games
+                .Include(game => game.Tags)
+                .Include(game => game.Screenshots)
+                .FirstOrDefaultAsync(game => game.Id == id);
 
             if (game == null)
             {
@@ -358,97 +509,81 @@ namespace MiniSteam.Controllers
                 Name = game.Name,
                 Description = game.Description,
                 Price = game.Price,
+                DiscountPercent = game.DiscountPercent,
                 ReleaseDate = game.ReleaseDate,
                 Developer = game.Developer,
                 Publisher = game.Publisher,
                 IsPublic = game.IsPublic,
                 GenreId = game.GenreId,
-                ExistingImageUrl = game.ImageUrl
+                ExistingImageUrl = game.ImageUrl,
+                TagsText = string.Join(", ", game.Tags.OrderBy(tag => tag.Name).Select(tag => tag.Name)),
+                ScreenshotUrlsText = string.Join(
+                    Environment.NewLine,
+                    game.Screenshots.OrderBy(screenshot => screenshot.SortOrder).Select(screenshot => screenshot.Url)),
+                MinimumSystemRequirements = game.MinimumSystemRequirements,
+                RecommendedSystemRequirements = game.RecommendedSystemRequirements
             };
 
-            ViewBag.GenreId = new SelectList(
-                _context.Genres.OrderBy(genre => genre.Name),
-                "Id",
-                "Name",
-                game.GenreId);
-
+            LoadGenreList(game.GenreId);
             return View(model);
         }
 
-        // POST: Games/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Edit(
-    int id,
-    GameViewModel model)
+        public async Task<IActionResult> Edit(int id, GameViewModel model)
         {
             if (id != model.Id)
             {
                 return NotFound();
             }
 
-            if (model.ImageFile != null &&
-                !IsValidImage(model.ImageFile))
+            if (model.ImageFile != null && !IsValidImage(model.ImageFile))
             {
                 ModelState.AddModelError(
                     nameof(model.ImageFile),
                     "Image must be JPG, JPEG, PNG or WEBP and no larger than 5 MB.");
             }
 
+            ValidateStoreContent(model);
+
             if (ModelState.IsValid)
             {
-                var game = await _context.Games.FindAsync(id);
+                var game = await _context.Games
+                    .Include(game => game.Tags)
+                    .Include(game => game.Screenshots)
+                    .FirstOrDefaultAsync(game => game.Id == id);
 
                 if (game == null)
                 {
                     return NotFound();
                 }
 
-                game.Name = model.Name;
-                game.Description = model.Description;
+                game.Name = model.Name.Trim();
+                game.Description = model.Description?.Trim();
                 game.Price = model.Price;
+                game.DiscountPercent = model.Price == 0 ? 0 : model.DiscountPercent;
                 game.ReleaseDate = model.ReleaseDate;
-                game.Developer = model.Developer;
-                game.Publisher = model.Publisher;
+                game.Developer = model.Developer.Trim();
+                game.Publisher = model.Publisher?.Trim();
                 game.IsPublic = model.IsPublic;
                 game.GenreId = model.GenreId;
+                game.MinimumSystemRequirements = model.MinimumSystemRequirements?.Trim();
+                game.RecommendedSystemRequirements = model.RecommendedSystemRequirements?.Trim();
+
+                await ApplyStoreContentAsync(
+                    game,
+                    ParseTags(model.TagsText),
+                    ParseScreenshotUrls(model.ScreenshotUrlsText));
 
                 string? oldImageUrlToDelete = null;
-                string? newImageFilePath = null;
+                string? newImageUrl = null;
 
-                if (model.ImageFile != null &&
-                    model.ImageFile.Length > 0)
+                if (model.ImageFile != null && model.ImageFile.Length > 0)
                 {
                     oldImageUrlToDelete = game.ImageUrl;
-
-                    var extension = Path
-                        .GetExtension(model.ImageFile.FileName)
-                        .ToLowerInvariant();
-
-                    var fileName =
-                        $"{Guid.NewGuid()}{extension}";
-
-                    var folderPath = Path.Combine(
-                        _webHostEnvironment.WebRootPath,
-                        "images",
-                        "games");
-
-                    Directory.CreateDirectory(folderPath);
-
-                    newImageFilePath = Path.Combine(
-                        folderPath,
-                        fileName);
-
-                    using (var stream = new FileStream(
-                        newImageFilePath,
-                        FileMode.Create))
-                    {
-                        await model.ImageFile.CopyToAsync(stream);
-                    }
-
-                    game.ImageUrl =
-                        $"/images/games/{fileName}";
+                    newImageUrl = await SaveImageAsync(model.ImageFile);
+                    game.ImageUrl = newImageUrl;
                 }
 
                 try
@@ -457,49 +592,22 @@ namespace MiniSteam.Controllers
                 }
                 catch
                 {
-                    // Если БД не сохранилась, удаляем только что загруженную
-                    // новую картинку, чтобы не оставлять лишний файл на диске.
-                    if (!string.IsNullOrEmpty(newImageFilePath) &&
-                        System.IO.File.Exists(newImageFilePath))
-                    {
-                        System.IO.File.Delete(newImageFilePath);
-                    }
-
+                    DeleteLocalGameImage(newImageUrl);
                     throw;
                 }
 
-                // Старую картинку удаляем только после успешного сохранения БД.
-                if (!string.IsNullOrEmpty(oldImageUrlToDelete) &&
-                    oldImageUrlToDelete.StartsWith("/images/games/"))
+                if (!string.IsNullOrEmpty(oldImageUrlToDelete))
                 {
-                    var oldFileName =
-                        Path.GetFileName(oldImageUrlToDelete);
-
-                    var oldFilePath = Path.Combine(
-                        _webHostEnvironment.WebRootPath,
-                        "images",
-                        "games",
-                        oldFileName);
-
-                    if (System.IO.File.Exists(oldFilePath))
-                    {
-                        System.IO.File.Delete(oldFilePath);
-                    }
+                    DeleteLocalGameImage(oldImageUrlToDelete);
                 }
 
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewBag.GenreId = new SelectList(
-                _context.Genres.OrderBy(genre => genre.Name),
-                "Id",
-                "Name",
-                model.GenreId);
-
+            LoadGenreList(model.GenreId);
             return View(model);
         }
 
-        // GET: Games/Delete/5
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int? id)
         {
@@ -508,7 +616,9 @@ namespace MiniSteam.Controllers
                 return NotFound();
             }
 
-            var game = await _context.Games.FindAsync(id);
+            var game = await _context.Games
+                .Include(game => game.Genre)
+                .FirstOrDefaultAsync(game => game.Id == id);
 
             if (game == null)
             {
@@ -518,7 +628,6 @@ namespace MiniSteam.Controllers
             return View(game);
         }
 
-        // POST: Games/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
@@ -531,9 +640,7 @@ namespace MiniSteam.Controllers
                 return NotFound();
             }
 
-            // Запоминаем путь картинки до удаления игры.
             var imageUrl = game.ImageUrl;
-
             _context.Games.Remove(game);
 
             try
@@ -548,26 +655,7 @@ namespace MiniSteam.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // Удаляем локальный файл картинки
-            // только после успешного удаления игры из БД.
-            if (!string.IsNullOrEmpty(imageUrl) &&
-                imageUrl.StartsWith("/images/games/"))
-            {
-                var fileName =
-                    Path.GetFileName(imageUrl);
-
-                var filePath = Path.Combine(
-                    _webHostEnvironment.WebRootPath,
-                    "images",
-                    "games",
-                    fileName);
-
-                if (System.IO.File.Exists(filePath))
-                {
-                    System.IO.File.Delete(filePath);
-                }
-            }
-
+            DeleteLocalGameImage(imageUrl);
             return RedirectToAction(nameof(Index));
         }
     }

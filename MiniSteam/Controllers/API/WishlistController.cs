@@ -40,7 +40,7 @@ namespace MiniSteam.Controllers.API
         }
 
         [HttpPost("{gameId}")]
-        public async Task<IActionResult> AddToWishlist(int gameId)
+        public async Task<IActionResult> Add(int gameId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -78,7 +78,7 @@ namespace MiniSteam.Controllers.API
         }
 
         [HttpDelete("{gameId}")]
-        public async Task<IActionResult> RemoveFromWishlist(int gameId)
+        public async Task<IActionResult> Remove(int gameId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -103,7 +103,9 @@ namespace MiniSteam.Controllers.API
             {
                 GameId = item.GameId,
                 Name = item.Game.Name,
-                Price = item.Game.Price,
+                OriginalPrice = item.Game.Price,
+                DiscountPercent = item.Game.DiscountPercent,
+                Price = item.Game.FinalPrice,
                 ImageUrl = item.Game.ImageUrl,
                 Developer = item.Game.Developer,
                 GenreId = item.Game.GenreId,

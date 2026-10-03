@@ -104,7 +104,7 @@
                 <article class="wishlist-row"
                          data-game-name="@item.Game.Name.ToLowerInvariant()"
                          data-game-developer="@item.Game.Developer.ToLowerInvariant()"
-                         data-price="@item.Game.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                         data-price="@item.Game.FinalPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                          data-added="@item.AddedAt.ToString("O")"
                          data-release="@item.Game.ReleaseDate.ToString("O")">
 
@@ -154,9 +154,17 @@
                             {
                                 <span class="wishlist-free">Free</span>
                             }
+                            else if (item.Game.HasDiscount)
+                            {
+                                <div class="wishlist-sale-price">
+                                    <span class="wishlist-discount-badge">-@item.Game.DiscountPercent%</span>
+                                    <span class="wishlist-old-price">@item.Game.Price.ToString("0.00") €</span>
+                                    <span>@item.Game.FinalPrice.ToString("0.00") €</span>
+                                </div>
+                            }
                             else
                             {
-                                <span>@item.Game.Price.ToString("0.00") €</span>
+                                <span>@item.Game.FinalPrice.ToString("0.00") €</span>
                             }
 
                         </div>

@@ -85,7 +85,18 @@
                             </a>
 
                             <div class="cart-game-side">
-                                <strong>@item.Price.ToString("0.00") €</strong>
+                                @if (item.DiscountPercent > 0 && item.OriginalPrice > item.Price)
+                                {
+                                    <div class="cart-price-sale">
+                                        <span class="cart-discount-badge">-@item.DiscountPercent%</span>
+                                        <span class="cart-old-price">@item.OriginalPrice.ToString("0.00") €</span>
+                                        <strong>@item.Price.ToString("0.00") €</strong>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <strong>@item.Price.ToString("0.00") €</strong>
+                                }
 
                                 <form asp-controller="Cart"
                                       asp-action="Remove"

@@ -99,10 +99,11 @@
                             </li>
 
                             <li class="nav-item">
-                                <a class="mini-nav-link @(cartActive ? "active" : "")"
+                                <a class="mini-nav-link mini-cart-link @(cartActive ? "active" : "")"
                                    asp-controller="Cart"
                                    asp-action="Index">
-                                    CART
+                                    <span>CART</span>
+                                    @await Component.InvokeAsync("CartCount")
                                 </a>
                             </li>
                         }

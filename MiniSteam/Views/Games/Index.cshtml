@@ -208,9 +208,13 @@
                                 {
                                     <strong class="admin-free-price">Free</strong>
                                 }
+                                else if (item.HasDiscount)
+                                {
+                                    <strong>@item.FinalPrice.ToString("0.00") € (-@item.DiscountPercent%)</strong>
+                                }
                                 else
                                 {
-                                    <strong>@item.Price.ToString("0.00") €</strong>
+                                    <strong>@item.FinalPrice.ToString("0.00") €</strong>
                                 }
 
                             </div>

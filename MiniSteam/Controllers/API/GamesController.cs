@@ -14,13 +14,14 @@ namespace MiniSteam.Controllers.API
     {
         private readonly DataContext _context;
 
+        private const int MaxTags = 20;
+        private const int MaxScreenshots = 12;
+
         public GamesController(DataContext context)
         {
             _context = context;
         }
 
-        // Public store catalog. Optional filters mirror the MVC store.
-        // GET: api/games?searchString=portal&genreId=2
         [HttpGet]
         public async Task<IActionResult> GetGames(
             string? searchString,
@@ -28,6 +29,8 @@ namespace MiniSteam.Controllers.API
         {
             var games = _context.Games
                 .Include(game => game.Genre)
+                .Include(game => game.Tags)
+                .Include(game => game.Screenshots)
                 .Where(game => game.IsPublic)
                 .AsQueryable();
 
@@ -39,7 +42,8 @@ namespace MiniSteam.Controllers.API
                     game.Name.Contains(search) ||
                     game.Developer.Contains(search) ||
                     (game.Publisher != null && game.Publisher.Contains(search)) ||
-                    (game.Genre != null && game.Genre.Name.Contains(search)));
+                    (game.Genre != null && game.Genre.Name.Contains(search)) ||
+                    game.Tags.Any(tag => tag.Name.Contains(search)));
             }
 
             if (genreId.HasValue)
@@ -49,31 +53,18 @@ namespace MiniSteam.Controllers.API
 
             var result = await games
                 .OrderBy(game => game.Name)
-                .Select(game => new GameDto
-                {
-                    Id = game.Id,
-                    Name = game.Name,
-                    Description = game.Description,
-                    Price = game.Price,
-                    ReleaseDate = game.ReleaseDate,
-                    Developer = game.Developer,
-                    Publisher = game.Publisher,
-                    ImageUrl = game.ImageUrl,
-                    GenreId = game.GenreId,
-                    GenreName = game.Genre != null ? game.Genre.Name : null,
-                    IsPublic = game.IsPublic
-                })
                 .ToListAsync();
 
-            return Ok(result);
+            return Ok(result.Select(ToDto));
         }
 
-        // Full public game details for a web/mobile/desktop client.
         [HttpGet("{id}")]
         public async Task<IActionResult> GetGame(int id)
         {
             var game = await _context.Games
                 .Include(game => game.Genre)
+                .Include(game => game.Tags)
+                .Include(game => game.Screenshots)
                 .FirstOrDefaultAsync(game => game.IsPublic && game.Id == id);
 
             if (game == null)
@@ -88,6 +79,13 @@ namespace MiniSteam.Controllers.API
         [HttpPost]
         public async Task<IActionResult> PostGame([FromBody] CreateGameDto model)
         {
+            var validationError = ValidateStoreContent(model.Tags, model.Screenshots);
+
+            if (validationError != null)
+            {
+                return BadRequest(validationError);
+            }
+
             if (string.IsNullOrWhiteSpace(model.Name))
             {
                 return BadRequest("The game name is required.");
@@ -124,14 +122,23 @@ namespace MiniSteam.Controllers.API
                 Name = normalizedName,
                 Description = model.Description?.Trim(),
                 Price = model.Price,
+                DiscountPercent = model.Price == 0 ? 0 : model.DiscountPercent,
                 ReleaseDate = model.ReleaseDate,
                 Developer = model.Developer.Trim(),
                 Publisher = model.Publisher?.Trim(),
                 GenreId = model.GenreId,
-                IsPublic = model.IsPublic
+                IsPublic = model.IsPublic,
+                MinimumSystemRequirements = model.MinimumSystemRequirements?.Trim(),
+                RecommendedSystemRequirements = model.RecommendedSystemRequirements?.Trim()
             };
 
             _context.Games.Add(game);
+
+            await ApplyStoreContentAsync(
+                game,
+                NormalizeTags(model.Tags),
+                NormalizeScreenshots(model.Screenshots));
+
             await _context.SaveChangesAsync();
 
             if (game.GenreId.HasValue)
@@ -150,7 +157,16 @@ namespace MiniSteam.Controllers.API
         [HttpPut("{id}")]
         public async Task<IActionResult> PutGame(int id, [FromBody] UpdateGameDto model)
         {
+            var validationError = ValidateStoreContent(model.Tags, model.Screenshots);
+
+            if (validationError != null)
+            {
+                return BadRequest(validationError);
+            }
+
             var game = await _context.Games
+                .Include(game => game.Tags)
+                .Include(game => game.Screenshots)
                 .FirstOrDefaultAsync(game => game.Id == id);
 
             if (game == null)
@@ -194,11 +210,19 @@ namespace MiniSteam.Controllers.API
             game.Name = normalizedName;
             game.Description = model.Description?.Trim();
             game.Price = model.Price;
+            game.DiscountPercent = model.Price == 0 ? 0 : model.DiscountPercent;
             game.ReleaseDate = model.ReleaseDate;
             game.Developer = model.Developer.Trim();
             game.Publisher = model.Publisher?.Trim();
             game.GenreId = model.GenreId;
             game.IsPublic = model.IsPublic;
+            game.MinimumSystemRequirements = model.MinimumSystemRequirements?.Trim();
+            game.RecommendedSystemRequirements = model.RecommendedSystemRequirements?.Trim();
+
+            await ApplyStoreContentAsync(
+                game,
+                NormalizeTags(model.Tags),
+                NormalizeScreenshots(model.Screenshots));
 
             await _context.SaveChangesAsync();
 
@@ -238,6 +262,120 @@ namespace MiniSteam.Controllers.API
             });
         }
 
+        private static string? ValidateStoreContent(
+            IEnumerable<string>? tags,
+            IEnumerable<string>? screenshots)
+        {
+            var normalizedTags = NormalizeTags(tags);
+            var normalizedScreenshots = NormalizeScreenshots(screenshots);
+
+            if (normalizedTags.Count > MaxTags)
+            {
+                return $"A game can have up to {MaxTags} tags.";
+            }
+
+            if (normalizedTags.Any(tag => tag.Length > 50))
+            {
+                return "Each tag can contain up to 50 characters.";
+            }
+
+            if (normalizedScreenshots.Count > MaxScreenshots)
+            {
+                return $"A game can have up to {MaxScreenshots} screenshots.";
+            }
+
+            if (normalizedScreenshots.Any(url =>
+                url.Length > 500 || !IsValidScreenshotUrl(url)))
+            {
+                return "Each screenshot must be an http/https URL or a local path beginning with '/'.";
+            }
+
+            return null;
+        }
+
+        private static List<string> NormalizeTags(IEnumerable<string>? tags)
+        {
+            return tags?
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Select(tag => tag.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList()
+                ?? new List<string>();
+        }
+
+        private static List<string> NormalizeScreenshots(IEnumerable<string>? screenshots)
+        {
+            return screenshots?
+                .Where(url => !string.IsNullOrWhiteSpace(url))
+                .Select(url => url.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList()
+                ?? new List<string>();
+        }
+
+        private static bool IsValidScreenshotUrl(string url)
+        {
+            if (url.StartsWith('/'))
+            {
+                return true;
+            }
+
+            return Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+        }
+
+        private async Task ApplyStoreContentAsync(
+            Game game,
+            IReadOnlyCollection<string> tagNames,
+            IReadOnlyCollection<string> screenshotUrls)
+        {
+            var tagNameList = tagNames.ToList();
+
+            var existingTags = tagNameList.Count == 0
+                ? new List<Tag>()
+                : await _context.Tags
+                    .Where(tag => tagNameList.Contains(tag.Name))
+                    .ToListAsync();
+
+            game.Tags.Clear();
+
+            foreach (var tagName in tagNameList)
+            {
+                var tag = existingTags.FirstOrDefault(existingTag =>
+                    string.Equals(existingTag.Name, tagName, StringComparison.OrdinalIgnoreCase));
+
+                if (tag == null)
+                {
+                    tag = new Tag
+                    {
+                        Name = tagName
+                    };
+
+                    _context.Tags.Add(tag);
+                    existingTags.Add(tag);
+                }
+
+                game.Tags.Add(tag);
+            }
+
+            if (game.Screenshots.Count > 0)
+            {
+                _context.GameScreenshots.RemoveRange(game.Screenshots.ToList());
+                game.Screenshots.Clear();
+            }
+
+            var sortOrder = 0;
+
+            foreach (var screenshotUrl in screenshotUrls)
+            {
+                game.Screenshots.Add(new GameScreenshot
+                {
+                    Url = screenshotUrl,
+                    SortOrder = sortOrder++
+                });
+            }
+        }
+
         private static GameDto ToDto(Game game)
         {
             return new GameDto
@@ -246,13 +384,25 @@ namespace MiniSteam.Controllers.API
                 Name = game.Name,
                 Description = game.Description,
                 Price = game.Price,
+                DiscountPercent = game.DiscountPercent,
+                FinalPrice = game.FinalPrice,
                 ReleaseDate = game.ReleaseDate,
                 Developer = game.Developer,
                 Publisher = game.Publisher,
                 ImageUrl = game.ImageUrl,
                 GenreId = game.GenreId,
                 GenreName = game.Genre?.Name,
-                IsPublic = game.IsPublic
+                IsPublic = game.IsPublic,
+                Tags = game.Tags
+                    .OrderBy(tag => tag.Name)
+                    .Select(tag => tag.Name)
+                    .ToList(),
+                Screenshots = game.Screenshots
+                    .OrderBy(screenshot => screenshot.SortOrder)
+                    .Select(screenshot => screenshot.Url)
+                    .ToList(),
+                MinimumSystemRequirements = game.MinimumSystemRequirements,
+                RecommendedSystemRequirements = game.RecommendedSystemRequirements
             };
         }
     }

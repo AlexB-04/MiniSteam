@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace MiniSteam.Models.ViewModels
 {
@@ -19,6 +19,10 @@ namespace MiniSteam.Models.ViewModels
             ErrorMessage = "Price must be between 0 and 9999.99.")]
         public decimal Price { get; set; }
 
+        [Range(0, 95, ErrorMessage = "Discount must be between 0 and 95 percent.")]
+        [Display(Name = "Discount (%)")]
+        public int DiscountPercent { get; set; }
+
         [DataType(DataType.Date)]
         public DateTime ReleaseDate { get; set; }
 
@@ -35,5 +39,19 @@ namespace MiniSteam.Models.ViewModels
 
         [Display(Name = "Image")]
         public IFormFile? ImageFile { get; set; }
+
+        [Display(Name = "Tags")]
+        public string? TagsText { get; set; }
+
+        [Display(Name = "Screenshot URLs")]
+        public string? ScreenshotUrlsText { get; set; }
+
+        [StringLength(4000)]
+        [Display(Name = "Minimum System Requirements")]
+        public string? MinimumSystemRequirements { get; set; }
+
+        [StringLength(4000)]
+        [Display(Name = "Recommended System Requirements")]
+        public string? RecommendedSystemRequirements { get; set; }
     }
 }

@@ -5,6 +5,7 @@ namespace MiniSteam.Services
     public interface ICartService
     {
         Task<List<CartItem>> GetCartAsync(string userId);
+        Task<int> GetCountAsync(string userId);
         Task<List<int>> GetCartGameIdsAsync(string userId, IEnumerable<int> gameIds);
         Task<bool> IsInCartAsync(string userId, int gameId);
         Task<ServiceResult<CartItem>> AddAsync(string userId, int gameId, bool isAdmin);

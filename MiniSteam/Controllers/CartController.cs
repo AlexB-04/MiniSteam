@@ -42,7 +42,9 @@ namespace MiniSteam.Controllers
                     Name = cartItem.Game.Name,
                     ImageUrl = cartItem.Game.ImageUrl,
                     GenreName = cartItem.Game.Genre?.Name,
-                    Price = cartItem.Game.Price
+                    OriginalPrice = cartItem.Game.Price,
+                    DiscountPercent = cartItem.Game.DiscountPercent,
+                    Price = cartItem.Game.FinalPrice
                 })
                 .ToList();
 

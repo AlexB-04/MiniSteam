@@ -167,6 +167,16 @@
 
                         </div>
 
+                        @if (game.Tags.Any())
+                        {
+                            <div class="store-game-tags">
+                                @foreach (var tag in game.Tags.OrderBy(tag => tag.Name).Take(3))
+                                {
+                                    <span>@tag.Name</span>
+                                }
+                            </div>
+                        }
+
                         <span class="store-game-date">
                             Released @game.ReleaseDate.ToString("dd MMM yyyy")
                         </span>
@@ -182,10 +192,18 @@
                                 Free
                             </span>
                         }
+                        else if (game.HasDiscount)
+                        {
+                            <div class="store-sale-price">
+                                <span class="store-discount-badge">-@game.DiscountPercent%</span>
+                                <span class="store-old-price">@game.Price.ToString("0.00") €</span>
+                                <span class="store-game-price-value">@game.FinalPrice.ToString("0.00") €</span>
+                            </div>
+                        }
                         else
                         {
                             <span class="store-game-price-value">
-                                @game.Price.ToString("0.00") €
+                                @game.FinalPrice.ToString("0.00") €
                             </span>
                         }
 

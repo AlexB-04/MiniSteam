@@ -1,0 +1,127 @@
+@model MiniSteam.Models.ViewModels.CartViewModel
+
+@{
+    ViewData["Title"] = "Cart";
+    var itemCount = Model.Items.Count;
+}
+
+<div class="cart-page">
+
+    @if (TempData["CartMessage"] != null)
+    {
+        <div class="wishlist-status-message">
+            @TempData["CartMessage"]
+        </div>
+    }
+
+
+    <div class="cart-header">
+        <div>
+            <span class="cart-eyebrow">MINISTEAM CART</span>
+            <h1>Your Cart</h1>
+            <p>Review your games before adding them to your library.</p>
+        </div>
+
+        <div class="cart-header-actions">
+            <div class="cart-count-card">
+                <strong>@itemCount</strong>
+                <span>@(itemCount == 1 ? "game" : "games")</span>
+            </div>
+
+            <a asp-controller="Games" asp-action="Store" class="cart-store-button">Continue Shopping</a>
+        </div>
+    </div>
+
+    @if (!Model.Items.Any())
+    {
+        <div class="cart-empty">
+            <div class="cart-empty-icon">🛒</div>
+            <span class="cart-empty-label">YOUR CART</span>
+            <h2>Your cart is empty</h2>
+            <p>Add a paid game from the store and it will appear here.</p>
+            <a asp-controller="Games" asp-action="Store" class="cart-store-button">Browse the Store</a>
+        </div>
+    }
+    else
+    {
+        <div class="cart-layout">
+            <section class="cart-items-panel">
+                <div class="cart-section-header">
+                    <div>
+                        <span class="cart-section-eyebrow">ITEMS</span>
+                        <h2>Ready for checkout</h2>
+                    </div>
+
+                    <span class="cart-section-count">
+                        @itemCount @(itemCount == 1 ? "item" : "items")
+                    </span>
+                </div>
+
+                <div class="cart-list">
+                    @foreach (var item in Model.Items)
+                    {
+                        <article class="cart-row">
+                            <a asp-controller="Games"
+                               asp-action="Details"
+                               asp-route-id="@item.GameId"
+                               asp-route-from="cart"
+                               class="cart-game-main">
+
+                                <div class="cart-game-image">
+                                    @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                                    {
+                                        <img src="@item.ImageUrl" alt="@item.Name" />
+                                    }
+                                    else
+                                    {
+                                        <img src="~/images/noimage.jpg" alt="No image available" />
+                                    }
+                                </div>
+
+                                <div class="cart-game-info">
+                                    <h3>@item.Name</h3>
+                                    <span>@(item.GenreName ?? "Uncategorized")</span>
+                                </div>
+                            </a>
+
+                            <div class="cart-game-side">
+                                <strong>@item.Price.ToString("0.00") €</strong>
+
+                                <form asp-controller="Cart"
+                                      asp-action="Remove"
+                                      asp-route-gameId="@item.GameId"
+                                      method="post">
+                                    <button type="submit" class="cart-remove-button">Remove</button>
+                                </form>
+                            </div>
+                        </article>
+                    }
+                </div>
+            </section>
+
+            <aside class="cart-summary">
+                <span class="cart-summary-eyebrow">ORDER SUMMARY</span>
+                <h2>Purchase for yourself</h2>
+
+                <div class="cart-summary-line">
+                    <span>Games</span>
+                    <strong>@itemCount</strong>
+                </div>
+
+                <div class="cart-summary-line cart-summary-total">
+                    <span>Total</span>
+                    <strong>@Model.TotalPrice.ToString("0.00") €</strong>
+                </div>
+
+                <form asp-controller="Cart" asp-action="Checkout" method="post">
+                    <button type="submit" class="cart-checkout-button">Purchase for myself</button>
+                </form>
+
+                <p class="cart-summary-note">
+                    MiniSteam is an educational project. No real payment is processed.
+                </p>
+            </aside>
+        </div>
+    }
+
+</div>

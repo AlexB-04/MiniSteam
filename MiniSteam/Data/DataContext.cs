@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using MiniSteam.Models.Entities;
 
@@ -23,6 +23,8 @@ namespace MiniSteam.Data
         public DbSet<WishlistItem> WishlistItems { get; set; }
 
         public DbSet<Review> Reviews { get; set; }
+
+        public DbSet<CartItem> CartItems { get; set; }
 
         // Конструктор класса DataContext, который принимает параметры конфигурации DbContextOptions и передает их базовому классу DbContext.
         // Это позволяет настроить контекст базы данных, например, указать строку подключения к базе данных.
@@ -57,6 +59,10 @@ namespace MiniSteam.Data
 
             modelBuilder.Entity<Review>()
                 .HasIndex(review => new { review.UserId, review.GameId })
+                .IsUnique();
+
+            modelBuilder.Entity<CartItem>()
+                .HasIndex(cartItem => new { cartItem.UserId, cartItem.GameId })
                 .IsUnique();
 
         }

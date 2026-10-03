@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -218,6 +218,7 @@ namespace MiniSteam.Controllers
 
             ViewBag.IsInLibrary = false;
             ViewBag.IsInWishlist = false;
+            ViewBag.IsInCart = false;
 
             if (currentUser != null)
             {
@@ -232,6 +233,11 @@ namespace MiniSteam.Controllers
                     .AnyAsync(wishlistItem =>
                         wishlistItem.UserId == currentUser.Id &&
                         wishlistItem.GameId == game.Id);
+
+                ViewBag.IsInCart = await _context.CartItems
+                    .AnyAsync(cartItem =>
+                        cartItem.UserId == currentUser.Id &&
+                        cartItem.GameId == game.Id);
 
                 var alreadyReviewed = await _context.Reviews
                     .AnyAsync(review =>

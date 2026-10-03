@@ -19,6 +19,21 @@
 
 <div class="game-details-page game-details-v2">
 
+    @if (TempData["CartMessage"] != null)
+    {
+        <div class="game-action-notice">
+            @TempData["CartMessage"]
+        </div>
+    }
+
+    @if (TempData["WishlistMessage"] != null)
+    {
+        <div class="game-action-notice">
+            @TempData["WishlistMessage"]
+        </div>
+    }
+
+
     <div class="game-details-navigation">
         @if (ViewBag.From == "games")
         {
@@ -31,6 +46,10 @@
         else if (ViewBag.From == "wishlist")
         {
             <a asp-controller="Wishlist" asp-action="Index" class="game-details-back">← Back to Wishlist</a>
+        }
+        else if (ViewBag.From == "cart")
+        {
+            <a asp-controller="Cart" asp-action="Index" class="game-details-back">← Back to Cart</a>
         }
         else
         {
@@ -167,16 +186,26 @@
                         }
                         else
                         {
-                            <form asp-controller="Purchase" asp-action="Buy" asp-route-gameId="@Model.Id" method="post">
-                                @if (isFree)
-                                {
+                            @if (isFree)
+                            {
+                                <form asp-controller="Purchase" asp-action="Buy" asp-route-gameId="@Model.Id" method="post">
                                     <button type="submit" class="game-buy-button">Get Game</button>
-                                }
-                                else
-                                {
-                                    <button type="submit" class="game-buy-button">Buy Now</button>
-                                }
-                            </form>
+                                </form>
+                            }
+                            else if (ViewBag.IsInCart == true)
+                            {
+                                <a asp-controller="Cart" asp-action="Index" class="game-buy-button game-cart-view-button">View Cart</a>
+                            }
+                            else
+                            {
+                                <form asp-controller="Cart"
+                                      asp-action="Add"
+                                      asp-route-gameId="@Model.Id"
+                                      asp-route-returnUrl="@Url.Action("Details", "Games", new { id = Model.Id })"
+                                      method="post">
+                                    <button type="submit" class="game-buy-button">Add to Cart</button>
+                                </form>
+                            }
 
                             @if (ViewBag.IsInWishlist == true)
                             {

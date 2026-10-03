@@ -1,4 +1,4 @@
-﻿@model IEnumerable<MiniSteam.Models.Entities.WishlistItem>
+@model IEnumerable<MiniSteam.Models.Entities.WishlistItem>
 
 @{
     ViewData["Title"] = "Wishlist";
@@ -6,9 +6,26 @@
     var wishlistItems = Model
         .OrderByDescending(item => item.AddedAt)
         .ToList();
+
+    var ownedGameIds = ViewBag.OwnedGameIds as System.Collections.Generic.List<int> ?? new System.Collections.Generic.List<int>();
+    var cartGameIds = ViewBag.CartGameIds as System.Collections.Generic.List<int> ?? new System.Collections.Generic.List<int>();
 }
 
 <div class="wishlist-page">
+
+    @if (TempData["CartMessage"] != null)
+    {
+        <div class="wishlist-status-message">
+            @TempData["CartMessage"]
+        </div>
+    }
+
+    @if (TempData["WishlistMessage"] != null)
+    {
+        <div class="wishlist-status-message">
+            @TempData["WishlistMessage"]
+        </div>
+    }
 
     <div class="wishlist-header">
         <div>
@@ -81,6 +98,8 @@
             {
                 var isFree = item.Game.Price == 0;
                 var isUpcoming = item.Game.ReleaseDate.Date > DateTime.Today;
+                var isOwned = ownedGameIds.Contains(item.GameId);
+                var isInCart = cartGameIds.Contains(item.GameId);
 
                 <article class="wishlist-row"
                          data-game-name="@item.Game.Name.ToLowerInvariant()"
@@ -145,18 +164,30 @@
 
                         <div class="wishlist-actions">
 
-                            <form asp-controller="Purchase" asp-action="Buy" asp-route-gameId="@item.GameId" method="post">
-
-                                @if (isFree)
-                                {
+                            @if (isOwned)
+                            {
+                                <button type="button" class="wishlist-owned-button" disabled>In Library</button>
+                            }
+                            else if (isFree)
+                            {
+                                <form asp-controller="Purchase" asp-action="Buy" asp-route-gameId="@item.GameId" method="post">
                                     <button type="submit" class="wishlist-buy-button">Get Game</button>
-                                }
-                                else
-                                {
-                                    <button type="submit" class="wishlist-buy-button">Buy Now</button>
-                                }
-
-                            </form>
+                                </form>
+                            }
+                            else if (isInCart)
+                            {
+                                <a asp-controller="Cart" asp-action="Index" class="wishlist-cart-button">View Cart</a>
+                            }
+                            else
+                            {
+                                <form asp-controller="Cart"
+                                      asp-action="Add"
+                                      asp-route-gameId="@item.GameId"
+                                      asp-route-returnUrl="@Url.Action("Index", "Wishlist")"
+                                      method="post">
+                                    <button type="submit" class="wishlist-buy-button">Add to Cart</button>
+                                </form>
+                            }
 
                             <a asp-controller="Wishlist" asp-action="RemoveFromWishlist" asp-route-gameId="@item.GameId" class="wishlist-remove-button">Remove</a>
 

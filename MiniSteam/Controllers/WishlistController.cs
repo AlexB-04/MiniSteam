@@ -34,6 +34,24 @@ namespace MiniSteam.Controllers
                 .OrderByDescending(wishlistItem => wishlistItem.AddedAt)
                 .ToListAsync();
 
+            var wishlistGameIds = wishlistItems
+                .Select(wishlistItem => wishlistItem.GameId)
+                .ToList();
+
+            ViewBag.OwnedGameIds = await _context.LibraryGames
+                .Where(libraryGame =>
+                    libraryGame.UserId == user.Id &&
+                    wishlistGameIds.Contains(libraryGame.GameId))
+                .Select(libraryGame => libraryGame.GameId)
+                .ToListAsync();
+
+            ViewBag.CartGameIds = await _context.CartItems
+                .Where(cartItem =>
+                    cartItem.UserId == user.Id &&
+                    wishlistGameIds.Contains(cartItem.GameId))
+                .Select(cartItem => cartItem.GameId)
+                .ToListAsync();
+
             return View(wishlistItems);
         }
 
@@ -60,11 +78,15 @@ namespace MiniSteam.Controllers
                 return NotFound();
             }
 
-            var alreadyOwned = await _context.LibraryGames.AnyAsync(libraryGame => libraryGame.UserId == user.Id && libraryGame.GameId == game.Id);
+            var alreadyOwned = await _context.LibraryGames
+                .AnyAsync(libraryGame =>
+                    libraryGame.UserId == user.Id &&
+                    libraryGame.GameId == game.Id);
 
             if (alreadyOwned)
             {
-                return RedirectToAction("Index", "Library");
+                TempData["WishlistMessage"] = $"{game.Name} is already in your library.";
+                return RedirectToAction("Details", "Games", new { id = game.Id });
             }
 
             var alreadyExists = await _context.WishlistItems

@@ -1,4 +1,4 @@
-﻿@{
+@{
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
     var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
 
@@ -11,6 +11,9 @@
 
     var wishlistActive =
         currentController == "Wishlist";
+
+    var cartActive =
+        currentController == "Cart";
 
     var adminActive =
         User.IsInRole("Admin") &&
@@ -92,6 +95,14 @@
                                    asp-controller="Wishlist"
                                    asp-action="Index">
                                     WISHLIST
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="mini-nav-link @(cartActive ? "active" : "")"
+                                   asp-controller="Cart"
+                                   asp-action="Index">
+                                    CART
                                 </a>
                             </li>
                         }

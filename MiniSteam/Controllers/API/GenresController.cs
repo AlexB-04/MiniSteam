@@ -4,6 +4,7 @@ using MiniSteam.Data;
 using MiniSteam.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using MiniSteam.Models.Entities;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace MiniSteam.Controllers.API
 {
@@ -54,7 +55,7 @@ namespace MiniSteam.Controllers.API
             return Ok(genre);
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> PostGenre([FromBody] CreateGenreDto model)
         {
@@ -86,7 +87,7 @@ namespace MiniSteam.Controllers.API
             });
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutGenre(int id, [FromBody] UpdateGenreDto model)
         {
@@ -124,7 +125,7 @@ namespace MiniSteam.Controllers.API
             });
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteGenre(int id)
         {

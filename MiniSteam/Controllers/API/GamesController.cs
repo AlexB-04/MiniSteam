@@ -4,6 +4,7 @@ using MiniSteam.Models.DTOs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using MiniSteam.Models.Entities;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace MiniSteam.Controllers.API
 {
@@ -56,7 +57,7 @@ namespace MiniSteam.Controllers.API
             return Ok(game);
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> PostGame([FromBody] CreateGameDto model)
         {
@@ -112,7 +113,7 @@ namespace MiniSteam.Controllers.API
             });
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutGame(int id, [FromBody] UpdateGameDto model)
         {
@@ -169,7 +170,7 @@ namespace MiniSteam.Controllers.API
             });
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteGame(int id)
         {

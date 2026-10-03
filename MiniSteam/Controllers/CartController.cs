@@ -1,22 +1,26 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using MiniSteam.Data;
 using MiniSteam.Models.Entities;
 using MiniSteam.Models.ViewModels;
+using MiniSteam.Services;
 
 namespace MiniSteam.Controllers
 {
     [Authorize]
     public class CartController : Controller
     {
-        private readonly DataContext _context;
+        private readonly ICartService _cartService;
+        private readonly IPurchaseService _purchaseService;
         private readonly UserManager<User> _userManager;
 
-        public CartController(DataContext context, UserManager<User> userManager)
+        public CartController(
+            ICartService cartService,
+            IPurchaseService purchaseService,
+            UserManager<User> userManager)
         {
-            _context = context;
+            _cartService = cartService;
+            _purchaseService = purchaseService;
             _userManager = userManager;
         }
 
@@ -29,20 +33,18 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var items = await _context.CartItems
-                .Where(cartItem => cartItem.UserId == user.Id)
-                .OrderBy(cartItem => cartItem.AddedAt)
+            var cartItems = await _cartService.GetCartAsync(user.Id);
+
+            var items = cartItems
                 .Select(cartItem => new CartItemViewModel
                 {
                     GameId = cartItem.GameId,
                     Name = cartItem.Game.Name,
                     ImageUrl = cartItem.Game.ImageUrl,
-                    GenreName = cartItem.Game.Genre != null
-                        ? cartItem.Game.Genre.Name
-                        : null,
+                    GenreName = cartItem.Game.Genre?.Name,
                     Price = cartItem.Game.Price
                 })
-                .ToListAsync();
+                .ToList();
 
             var model = new CartViewModel
             {
@@ -64,49 +66,29 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var game = await _context.Games.FindAsync(gameId);
+            var result = await _cartService.AddAsync(
+                user.Id,
+                gameId,
+                User.IsInRole("Admin"));
 
-            if (game == null)
+            if (result.Status == ServiceResultStatus.NotFound)
             {
                 return NotFound();
             }
 
-            if (!game.IsPublic && !User.IsInRole("Admin"))
+            if (result.Status == ServiceResultStatus.AlreadyOwned ||
+                result.Status == ServiceResultStatus.Conflict)
             {
-                return NotFound();
-            }
-
-            var alreadyOwned = await _context.LibraryGames
-                .AnyAsync(libraryGame =>
-                    libraryGame.UserId == user.Id &&
-                    libraryGame.GameId == game.Id);
-
-            if (alreadyOwned)
-            {
-                TempData["CartMessage"] = $"{game.Name} is already in your library.";
+                TempData["CartMessage"] = result.Message ?? "Unable to add this game to the cart.";
                 return RedirectAfterAdd(returnUrl);
             }
 
-            var alreadyInCart = await _context.CartItems
-                .AnyAsync(cartItem =>
-                    cartItem.UserId == user.Id &&
-                    cartItem.GameId == game.Id);
-
-            if (alreadyInCart)
+            if (!result.Succeeded || result.Value == null)
             {
-                TempData["CartMessage"] = $"{game.Name} is already in your cart.";
-                return RedirectAfterAdd(returnUrl);
+                return BadRequest(result.Message ?? "Unable to add this game to the cart.");
             }
 
-            _context.CartItems.Add(new CartItem
-            {
-                UserId = user.Id,
-                GameId = game.Id
-            });
-
-            await _context.SaveChangesAsync();
-
-            TempData["CartMessage"] = $"{game.Name} was added to your cart.";
+            TempData["CartMessage"] = $"{result.Value.Game.Name} was added to your cart.";
             return RedirectAfterAdd(returnUrl);
         }
 
@@ -131,18 +113,12 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var cartItem = await _context.CartItems
-                .FirstOrDefaultAsync(item =>
-                    item.UserId == user.Id &&
-                    item.GameId == gameId);
+            var result = await _cartService.RemoveAsync(user.Id, gameId);
 
-            if (cartItem == null)
+            if (result.Status == ServiceResultStatus.NotFound)
             {
                 return NotFound();
             }
-
-            _context.CartItems.Remove(cartItem);
-            await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index));
         }
@@ -158,74 +134,19 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var cartItems = await _context.CartItems
-                .Include(cartItem => cartItem.Game)
-                .Where(cartItem => cartItem.UserId == user.Id)
-                .ToListAsync();
+            var result = await _purchaseService.CheckoutCartAsync(
+                user.Id,
+                User.IsInRole("Admin"));
 
-            if (!cartItems.Any())
+            if (result.Status == ServiceResultStatus.Empty)
             {
                 return RedirectToAction(nameof(Index));
             }
 
-            if (!User.IsInRole("Admin") &&
-                cartItems.Any(cartItem => !cartItem.Game.IsPublic))
+            if (!result.Succeeded)
             {
-                return BadRequest("One or more games in the cart are no longer available.");
+                return BadRequest(result.Message ?? "Checkout could not be completed.");
             }
-
-            var gameIds = cartItems
-                .Select(cartItem => cartItem.GameId)
-                .ToList();
-
-            var alreadyOwnedGameIds = await _context.LibraryGames
-                .Where(libraryGame =>
-                    libraryGame.UserId == user.Id &&
-                    gameIds.Contains(libraryGame.GameId))
-                .Select(libraryGame => libraryGame.GameId)
-                .ToListAsync();
-
-            if (alreadyOwnedGameIds.Any())
-            {
-                return BadRequest("One or more games in the cart are already in your library.");
-            }
-
-            var purchase = new Purchase
-            {
-                UserId = user.Id,
-                TotalPrice = cartItems.Sum(cartItem => cartItem.Game.Price)
-            };
-
-            foreach (var cartItem in cartItems)
-            {
-                purchase.PurchaseItems.Add(new PurchaseItem
-                {
-                    GameId = cartItem.GameId,
-                    Price = cartItem.Game.Price
-                });
-
-                _context.LibraryGames.Add(new LibraryGame
-                {
-                    UserId = user.Id,
-                    GameId = cartItem.GameId
-                });
-            }
-
-            var wishlistItems = await _context.WishlistItems
-                .Where(wishlistItem =>
-                    wishlistItem.UserId == user.Id &&
-                    gameIds.Contains(wishlistItem.GameId))
-                .ToListAsync();
-
-            if (wishlistItems.Any())
-            {
-                _context.WishlistItems.RemoveRange(wishlistItems);
-            }
-
-            _context.Purchases.Add(purchase);
-            _context.CartItems.RemoveRange(cartItems);
-
-            await _context.SaveChangesAsync();
 
             return RedirectToAction("Index", "Library");
         }

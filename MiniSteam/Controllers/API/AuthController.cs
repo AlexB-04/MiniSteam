@@ -28,6 +28,45 @@ namespace MiniSteam.Controllers.API
             _configuration = configuration;
         }
 
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterDto model)
+        {
+            var email = model.Email.Trim();
+
+            var existingUser = await _userManager.FindByEmailAsync(email);
+
+            if (existingUser != null)
+            {
+                return Conflict("An account with that email already exists.");
+            }
+
+            var user = new User
+            {
+                Email = email,
+                UserName = email
+            };
+
+            var result = await _userManager.CreateAsync(user, model.Password);
+
+            if (!result.Succeeded)
+            {
+                return BadRequest(new
+                {
+                    errors = result.Errors
+                        .Select(error => error.Description)
+                        .ToList()
+                });
+            }
+
+            await _userManager.AddToRoleAsync(user, "User");
+
+            var tokenResponse = await CreateTokenResponseAsync(user);
+
+            return StatusCode(
+                StatusCodes.Status201Created,
+                tokenResponse);
+        }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
@@ -48,6 +87,25 @@ namespace MiniSteam.Controllers.API
                 return Unauthorized("Invalid email or password.");
             }
 
+            return Ok(await CreateTokenResponseAsync(user));
+        }
+
+        [HttpGet("me")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public IActionResult Me()
+        {
+            return Ok(new
+            {
+                userId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+                email = User.FindFirstValue(ClaimTypes.Email),
+                roles = User.FindAll(ClaimTypes.Role)
+                    .Select(claim => claim.Value)
+                    .ToList()
+            });
+        }
+
+        private async Task<object> CreateTokenResponseAsync(User user)
+        {
             var roles = await _userManager.GetRolesAsync(user);
 
             var claims = new List<Claim>
@@ -67,7 +125,7 @@ namespace MiniSteam.Controllers.API
 
             if (string.IsNullOrWhiteSpace(jwtKey))
             {
-                return StatusCode(500, "JWT key is not configured.");
+                throw new InvalidOperationException("JWT key is not configured.");
             }
 
             var key = new SymmetricSecurityKey(
@@ -86,24 +144,12 @@ namespace MiniSteam.Controllers.API
                 expires: expiresAt,
                 signingCredentials: credentials);
 
-            return Ok(new
+            return new
             {
                 token = new JwtSecurityTokenHandler().WriteToken(token),
                 expiresAt,
                 roles
-            });
-        }
-
-        [HttpGet("me")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public IActionResult Me()
-        {
-            return Ok(new
-            {
-                userId = User.FindFirstValue(ClaimTypes.NameIdentifier),
-                email = User.FindFirstValue(ClaimTypes.Email),
-                roles = User.FindAll(ClaimTypes.Role).Select(claim => claim.Value).ToList()
-            });
+            };
         }
     }
 }

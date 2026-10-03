@@ -1,8 +1,8 @@
 namespace MiniSteam.Models.DTOs
 {
-    public class GameDto
+    public class LibraryGameDto
     {
-        public int Id { get; set; }
+        public int GameId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
         public decimal Price { get; set; }
@@ -12,6 +12,6 @@ namespace MiniSteam.Models.DTOs
         public string? ImageUrl { get; set; }
         public int? GenreId { get; set; }
         public string? GenreName { get; set; }
-        public bool IsPublic { get; set; }
+        public DateTime AddedAt { get; set; }
     }
 }

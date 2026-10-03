@@ -4,6 +4,7 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using MiniSteam.Data;
 using MiniSteam.Helpers;
+using MiniSteam.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
@@ -64,6 +65,13 @@ namespace MiniSteam
                 });
 
             builder.Services.AddScoped<IMailHelper, MailHelper>();
+
+            // Business services shared by MVC controllers and API controllers.
+            builder.Services.AddScoped<ILibraryService, LibraryService>();
+            builder.Services.AddScoped<IWishlistService, WishlistService>();
+            builder.Services.AddScoped<ICartService, CartService>();
+            builder.Services.AddScoped<IPurchaseService, PurchaseService>();
+            builder.Services.AddScoped<IReviewService, ReviewService>();
 
             builder.Services.AddTransient<SeedDb>();
 

@@ -1,22 +1,23 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using MiniSteam.Data;
 using MiniSteam.Models.Entities;
-using Microsoft.EntityFrameworkCore;
 using MiniSteam.Models.ViewModels;
+using MiniSteam.Services;
 
 namespace MiniSteam.Controllers
 {
     [Authorize]
     public class ReviewController : Controller
     {
-        private readonly DataContext _context;
+        private readonly IReviewService _reviewService;
         private readonly UserManager<User> _userManager;
 
-        public ReviewController(DataContext context, UserManager<User> userManager)
+        public ReviewController(
+            IReviewService reviewService,
+            UserManager<User> userManager)
         {
-            _context = context;
+            _reviewService = reviewService;
             _userManager = userManager;
         }
 
@@ -29,36 +30,26 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var game = await _context.Games.FindAsync(gameId);
+            var result = await _reviewService.CanCreateAsync(user.Id, gameId);
 
-            if (game == null)
+            if (result.Status == ServiceResultStatus.NotFound)
             {
                 return NotFound();
             }
 
-            var ownsGame = await _context.LibraryGames
-                .AnyAsync(libraryGame =>
-                    libraryGame.UserId == user.Id &&
-                    libraryGame.GameId == game.Id);
-
-            if (!ownsGame)
+            if (result.Status == ServiceResultStatus.Forbidden)
             {
                 return Forbid();
             }
 
-            var alreadyReviewed = await _context.Reviews
-                .AnyAsync(review =>
-                    review.UserId == user.Id &&
-                    review.GameId == game.Id);
-
-            if (alreadyReviewed)
+            if (result.Status == ServiceResultStatus.Conflict)
             {
-                return RedirectToAction("Details", "Games", new { id = game.Id });
+                return RedirectToAction("Details", "Games", new { id = gameId });
             }
 
             var model = new ReviewViewModel
             {
-                GameId = game.Id
+                GameId = gameId
             };
 
             return View(model);
@@ -75,51 +66,38 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var game = await _context.Games.FindAsync(model.GameId);
-
-            if (game == null)
-            {
-                return NotFound();
-            }
-
-            var ownsGame = await _context.LibraryGames
-                .AnyAsync(libraryGame =>
-                    libraryGame.UserId == user.Id &&
-                    libraryGame.GameId == game.Id);
-
-            if (!ownsGame)
-            {
-                return Forbid();
-            }
-
-            var alreadyReviewed = await _context.Reviews
-                .AnyAsync(review =>
-                    review.UserId == user.Id &&
-                    review.GameId == game.Id);
-
-            if (alreadyReviewed)
-            {
-                return RedirectToAction("Details", "Games", new { id = game.Id });
-            }
-
             if (!ModelState.IsValid)
             {
                 return View(model);
             }
 
-            var review = new Review
+            var result = await _reviewService.CreateAsync(
+                user.Id,
+                model.GameId,
+                model.Content,
+                model.IsRecommended!.Value);
+
+            if (result.Status == ServiceResultStatus.NotFound)
             {
-                UserId = user.Id,
-                GameId = game.Id,
-                Content = model.Content,
-                IsRecommended = model.IsRecommended!.Value,
-                CreatedAt = DateTime.UtcNow
-            };
+                return NotFound();
+            }
 
-            _context.Reviews.Add(review);
-            await _context.SaveChangesAsync();
+            if (result.Status == ServiceResultStatus.Forbidden)
+            {
+                return Forbid();
+            }
 
-            return RedirectToAction("Details", "Games", new { id = game.Id });
+            if (result.Status == ServiceResultStatus.Conflict)
+            {
+                return RedirectToAction("Details", "Games", new { id = model.GameId });
+            }
+
+            if (!result.Succeeded)
+            {
+                return BadRequest(result.Message ?? "Review could not be created.");
+            }
+
+            return RedirectToAction("Details", "Games", new { id = model.GameId });
         }
 
         public async Task<IActionResult> Edit(int id)
@@ -131,18 +109,24 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var review = await _context.Reviews.FindAsync(id);
+            var result = await _reviewService.GetForUserAsync(user.Id, id);
 
-            if (review == null)
+            if (result.Status == ServiceResultStatus.NotFound)
             {
                 return NotFound();
             }
 
-            if (review.UserId != user.Id)
+            if (result.Status == ServiceResultStatus.Forbidden)
             {
                 return Forbid();
             }
 
+            if (!result.Succeeded || result.Value == null)
+            {
+                return BadRequest(result.Message ?? "Review could not be loaded.");
+            }
+
+            var review = result.Value;
             var model = new ReviewViewModel
             {
                 Id = review.Id,
@@ -170,32 +154,42 @@ namespace MiniSteam.Controllers
                 return NotFound();
             }
 
-            var existingReview = await _context.Reviews.FindAsync(id);
+            var existing = await _reviewService.GetForUserAsync(user.Id, id);
 
-            if (existingReview == null)
+            if (existing.Status == ServiceResultStatus.NotFound)
             {
                 return NotFound();
             }
 
-            if (existingReview.UserId != user.Id)
+            if (existing.Status == ServiceResultStatus.Forbidden)
             {
                 return Forbid();
             }
 
-            model.GameId = existingReview.GameId;
+            if (!existing.Succeeded || existing.Value == null)
+            {
+                return BadRequest(existing.Message ?? "Review could not be loaded.");
+            }
+
+            model.GameId = existing.Value.GameId;
 
             if (!ModelState.IsValid)
             {
                 return View(model);
             }
 
-            existingReview.Content = model.Content;
-            existingReview.IsRecommended = model.IsRecommended!.Value;
-            existingReview.UpdatedAt = DateTime.UtcNow;
+            var result = await _reviewService.UpdateAsync(
+                user.Id,
+                id,
+                model.Content,
+                model.IsRecommended!.Value);
 
-            await _context.SaveChangesAsync();
+            if (!result.Succeeded || result.Value == null)
+            {
+                return BadRequest(result.Message ?? "Review could not be updated.");
+            }
 
-            return RedirectToAction("Details", "Games", new { id = existingReview.GameId });
+            return RedirectToAction("Details", "Games", new { id = result.Value.GameId });
         }
 
         public async Task<IActionResult> Delete(int id)
@@ -207,21 +201,24 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var review = await _context.Reviews
-                .Include(review => review.Game)
-                .FirstOrDefaultAsync(review => review.Id == id);
+            var result = await _reviewService.GetForUserAsync(user.Id, id);
 
-            if (review == null)
+            if (result.Status == ServiceResultStatus.NotFound)
             {
                 return NotFound();
             }
 
-            if (review.UserId != user.Id)
+            if (result.Status == ServiceResultStatus.Forbidden)
             {
                 return Forbid();
             }
 
-            return View(review);
+            if (!result.Succeeded || result.Value == null)
+            {
+                return BadRequest(result.Message ?? "Review could not be loaded.");
+            }
+
+            return View(result.Value);
         }
 
         [HttpPost, ActionName("Delete")]
@@ -235,24 +232,24 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var review = await _context.Reviews.FindAsync(id);
+            var result = await _reviewService.DeleteAsync(user.Id, id);
 
-            if (review == null)
+            if (result.Status == ServiceResultStatus.NotFound)
             {
                 return NotFound();
             }
 
-            if (review.UserId != user.Id)
+            if (result.Status == ServiceResultStatus.Forbidden)
             {
                 return Forbid();
             }
 
-            var gameId = review.GameId;
+            if (!result.Succeeded || result.Value == null)
+            {
+                return BadRequest(result.Message ?? "Review could not be deleted.");
+            }
 
-            _context.Reviews.Remove(review);
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction("Details", "Games", new { id = gameId });
+            return RedirectToAction("Details", "Games", new { id = result.Value.GameId });
         }
     }
 }

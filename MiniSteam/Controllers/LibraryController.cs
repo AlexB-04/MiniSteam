@@ -1,26 +1,25 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using MiniSteam.Data;
 using MiniSteam.Models.Entities;
+using MiniSteam.Services;
 
 namespace MiniSteam.Controllers
 {
     [Authorize]
     public class LibraryController : Controller
     {
-        private readonly DataContext _context;
+        private readonly ILibraryService _libraryService;
         private readonly UserManager<User> _userManager;
 
-        public LibraryController(DataContext context, UserManager<User> userManager)
+        public LibraryController(
+            ILibraryService libraryService,
+            UserManager<User> userManager)
         {
-            _context = context;
+            _libraryService = libraryService;
             _userManager = userManager;
         }
 
-
-        // GET: Library
         public async Task<IActionResult> Index()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -30,15 +29,10 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var libraryGames = await _context.LibraryGames
-                .Include(libraryGame => libraryGame.Game)
-                .Where(libraryGame => libraryGame.UserId == user.Id)
-                .ToListAsync();
-
+            var libraryGames = await _libraryService.GetLibraryAsync(user.Id);
             return View(libraryGames);
         }
 
-        // POST: Library/AddToLibrary
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
@@ -56,41 +50,29 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var game = await _context.Games.FindAsync(gameId);
+            var result = await _libraryService.AddAsync(
+                user.Id,
+                gameId.Value,
+                User.IsInRole("Admin"));
 
-            if (game == null)
+            if (result.Status == ServiceResultStatus.NotFound)
             {
                 return NotFound();
             }
 
-            if (!game.IsPublic && !User.IsInRole("Admin"))
+            if (result.Status == ServiceResultStatus.AlreadyOwned)
             {
-                return NotFound();
+                return RedirectToAction(nameof(Index));
             }
 
-            var alreadyExists = await _context.LibraryGames
-                .AnyAsync(libraryGame =>
-                    libraryGame.UserId == user.Id &&
-                    libraryGame.GameId == game.Id);
-
-            if (alreadyExists)
+            if (!result.Succeeded)
             {
-                return RedirectToAction("Index");
+                return BadRequest(result.Message ?? "Unable to add this game to the library.");
             }
 
-            var libraryGame = new LibraryGame
-            {
-                UserId = user.Id,
-                GameId = game.Id
-            };
-
-            _context.LibraryGames.Add(libraryGame);
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index));
         }
 
-        // POST: Library/RemoveFromLibrary
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
@@ -103,20 +85,14 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var libraryGame = await _context.LibraryGames
-                .FirstOrDefaultAsync(libraryGame =>
-                    libraryGame.UserId == user.Id &&
-                    libraryGame.GameId == gameId);
+            var result = await _libraryService.RemoveAsync(user.Id, gameId);
 
-            if (libraryGame == null)
+            if (result.Status == ServiceResultStatus.NotFound)
             {
                 return NotFound();
             }
 
-            _context.LibraryGames.Remove(libraryGame);
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index));
         }
     }
 }

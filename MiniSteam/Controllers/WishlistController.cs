@@ -1,21 +1,28 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using MiniSteam.Data;
 using MiniSteam.Models.Entities;
-using Microsoft.EntityFrameworkCore;
+using MiniSteam.Services;
 
 namespace MiniSteam.Controllers
 {
     [Authorize]
     public class WishlistController : Controller
     {
-        private readonly DataContext _context;
+        private readonly IWishlistService _wishlistService;
+        private readonly ILibraryService _libraryService;
+        private readonly ICartService _cartService;
         private readonly UserManager<User> _userManager;
 
-        public WishlistController(DataContext context, UserManager<User> userManager)
+        public WishlistController(
+            IWishlistService wishlistService,
+            ILibraryService libraryService,
+            ICartService cartService,
+            UserManager<User> userManager)
         {
-            _context = context;
+            _wishlistService = wishlistService;
+            _libraryService = libraryService;
+            _cartService = cartService;
             _userManager = userManager;
         }
 
@@ -28,29 +35,19 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var wishlistItems = await _context.WishlistItems
-                .Include(wishlistItem => wishlistItem.Game)
-                .Where(wishlistItem => wishlistItem.UserId == user.Id)
-                .OrderByDescending(wishlistItem => wishlistItem.AddedAt)
-                .ToListAsync();
+            var wishlistItems = await _wishlistService.GetWishlistAsync(user.Id);
 
             var wishlistGameIds = wishlistItems
                 .Select(wishlistItem => wishlistItem.GameId)
                 .ToList();
 
-            ViewBag.OwnedGameIds = await _context.LibraryGames
-                .Where(libraryGame =>
-                    libraryGame.UserId == user.Id &&
-                    wishlistGameIds.Contains(libraryGame.GameId))
-                .Select(libraryGame => libraryGame.GameId)
-                .ToListAsync();
+            ViewBag.OwnedGameIds = await _libraryService.GetOwnedGameIdsAsync(
+                user.Id,
+                wishlistGameIds);
 
-            ViewBag.CartGameIds = await _context.CartItems
-                .Where(cartItem =>
-                    cartItem.UserId == user.Id &&
-                    wishlistGameIds.Contains(cartItem.GameId))
-                .Select(cartItem => cartItem.GameId)
-                .ToListAsync();
+            ViewBag.CartGameIds = await _cartService.GetCartGameIdsAsync(
+                user.Id,
+                wishlistGameIds);
 
             return View(wishlistItems);
         }
@@ -66,51 +63,34 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var game = await _context.Games.FindAsync(gameId);
+            var result = await _wishlistService.AddAsync(
+                user.Id,
+                gameId,
+                User.IsInRole("Admin"));
 
-            if (game == null)
+            if (result.Status == ServiceResultStatus.NotFound)
             {
                 return NotFound();
             }
 
-            if (!game.IsPublic && !User.IsInRole("Admin"))
+            if (result.Status == ServiceResultStatus.AlreadyOwned)
             {
-                return NotFound();
+                TempData["WishlistMessage"] = result.Message;
+                return RedirectToAction("Details", "Games", new { id = gameId });
             }
 
-            var alreadyOwned = await _context.LibraryGames
-                .AnyAsync(libraryGame =>
-                    libraryGame.UserId == user.Id &&
-                    libraryGame.GameId == game.Id);
-
-            if (alreadyOwned)
+            if (result.Status == ServiceResultStatus.Conflict)
             {
-                TempData["WishlistMessage"] = $"{game.Name} is already in your library.";
-                return RedirectToAction("Details", "Games", new { id = game.Id });
+                return RedirectToAction(nameof(Index));
             }
 
-            var alreadyExists = await _context.WishlistItems
-                .AnyAsync(wishlistItem =>
-                    wishlistItem.UserId == user.Id &&
-                    wishlistItem.GameId == game.Id);
-
-            if (alreadyExists)
+            if (!result.Succeeded)
             {
-                return RedirectToAction("Index");
+                return BadRequest(result.Message ?? "Unable to add this game to the wishlist.");
             }
 
-            var wishlistItem = new WishlistItem
-            {
-                UserId = user.Id,
-                GameId = game.Id
-            };
-
-            _context.WishlistItems.Add(wishlistItem);
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index));
         }
-
 
         public async Task<IActionResult> RemoveFromWishlist(int gameId)
         {
@@ -121,11 +101,7 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var wishlistItem = await _context.WishlistItems
-                .Include(wishlistItem => wishlistItem.Game)
-                .FirstOrDefaultAsync(wishlistItem =>
-                    wishlistItem.UserId == user.Id &&
-                    wishlistItem.GameId == gameId);
+            var wishlistItem = await _wishlistService.GetItemAsync(user.Id, gameId);
 
             if (wishlistItem == null)
             {
@@ -146,20 +122,14 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var wishlistItem = await _context.WishlistItems
-                .FirstOrDefaultAsync(wishlistItem =>
-                    wishlistItem.UserId == user.Id &&
-                    wishlistItem.GameId == gameId);
+            var result = await _wishlistService.RemoveAsync(user.Id, gameId);
 
-            if (wishlistItem == null)
+            if (result.Status == ServiceResultStatus.NotFound)
             {
                 return NotFound();
             }
 
-            _context.WishlistItems.Remove(wishlistItem);
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index));
         }
     }
 }

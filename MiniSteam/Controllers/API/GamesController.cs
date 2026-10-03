@@ -4,7 +4,6 @@ using MiniSteam.Models.DTOs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using MiniSteam.Models.Entities;
-using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
 namespace MiniSteam.Controllers.API
 {

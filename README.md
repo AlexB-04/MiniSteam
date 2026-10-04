@@ -1,84 +1,67 @@
-# MiniSteam v2.9 Release Candidate
+# MiniSteam v3 — Desktop Client Foundation
 
-MiniSteam is an educational ASP.NET Core digital game store prototype. The v2 line now contains a Steam-like web storefront, Identity accounts, JWT-backed REST API, service-layer business rules, purchases/library/wishlist/cart/reviews, media and discounts, automated tests, and a deployment baseline.
+MiniSteam is an educational digital game store/platform prototype. The completed v2 line provides the ASP.NET Core web storefront and backend API; v3 adds a real Windows desktop client on top of that API.
 
 ## Solution
 
 ```text
 MiniSteam.slnx
-├── MiniSteam/        ASP.NET Core MVC + Web API
-└── MiniSteam.Tests/  unit + integration tests
+├── MiniSteam/          ASP.NET Core MVC + REST API
+├── MiniSteam.Tests/    unit + HTTP integration tests
+└── MiniSteam.Desktop/  WPF desktop client
 ```
 
-## v2.9 focus
+## Completed v2 backend
 
-v2.9 is the final backend/web hardening stage before the first desktop client.
+The v2.9 backend includes:
 
-- refresh-token rotation for future `MiniSteam.exe`
-- consistent API `ProblemDetails`
+- Identity accounts and roles
+- JWT access tokens
+- rotating refresh tokens
+- Store / Game Details
+- Library / Wishlist / Cart / Checkout / Purchases
+- Reviews and review voting
+- tags, screenshots, trailers, discounts, release states
+- paged game API
+- ProblemDetails errors
 - correlation IDs and structured logging
-- paged games endpoint for desktop clients
-- `/health/live`, `/health/ready`, `/health`
-- ASP.NET integration tests with an in-memory database
-- GitHub Actions build/test workflow
-- Dockerfile + Docker Compose baseline
-- production configuration cleanup
+- health checks
+- 39 automated tests
+- Docker and CI baseline
+
+## v3.0 desktop foundation
+
+The first WPF client now implements:
+
+- Login through `POST /api/auth/login`
+- in-memory JWT + refresh-token session
+- automatic refresh-token rotation
+- paged Store
+- search and discovery sections
+- Game Details
+- Library through Bearer authentication
+- logout with refresh-token revoke
+- relative backend artwork URL normalization
+
+The desktop project intentionally has **no project reference** to the ASP.NET backend. Client models are separate and communication happens through HTTP, just as it would for a real external client.
 
 ## Local development
 
-The project targets **.NET 10** and uses SQL Server / LocalDB.
+The backend targets .NET 10 and SQL Server / LocalDB. Configure its JWT key with User Secrets as described by the v2.9 setup.
 
-Keep secrets out of `appsettings.json`. Configure the JWT key with User Secrets:
-
-```powershell
-dotnet user-secrets set "Jwt:Key" "<BASE64_KEY>" --project .\MiniSteam\MiniSteam.csproj
-```
-
-Generate a secure key in PowerShell:
-
-```powershell
-[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
-```
-
-Then:
-
-```powershell
-dotnet restore MiniSteam.slnx
-dotnet build MiniSteam.slnx
-```
-
-Apply the v2.9 EF migration as described in `MIGRATION_STEPS.md`, then run the application.
-
-## Tests
-
-```powershell
-dotnet test .\MiniSteam.Tests\MiniSteam.Tests.csproj
-```
-
-The v2.9 patch contains **39 tests**: the existing service/business tests plus HTTP integration tests for health, authorization, pagination, ProblemDetails, and the JWT access/refresh/revoke session flow.
-
-## Health
+Start the backend using its HTTPS profile. It exposes:
 
 ```text
-GET /health/live   process is alive
-GET /health/ready  database can be reached
-GET /health        all registered health checks
+https://localhost:7161
+http://localhost:5219
 ```
 
-## Desktop-ready auth flow
+The desktop client defaults to the local HTTPS endpoint:
 
 ```text
-POST /api/auth/login
-        ↓
-access token + refresh token
-        ↓
-Bearer access token for API requests
-        ↓
-POST /api/auth/refresh
-        ↓
-rotated access + refresh token pair
+MiniSteam.Desktop/appsettings.json
 ```
 
-Refresh tokens are stored in SQL Server only as SHA-256 hashes. Raw refresh tokens are returned to the client once and are rotated on refresh.
+Then start `MiniSteam.Desktop` and sign in with an existing MiniSteam account.
 
-See `API_V29.md`, `DEPLOYMENT.md`, and `PROJECT_STATUS.md` for the current contract and roadmap.
+See `V3_DESKTOP_SETUP.md` for the first-run checklist and `API_V29.md` for the API contract inherited by the desktop client.

@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="MiniSteam.Desktop/MiniSteam.Desktop.csproj" />
   <Project Path="MiniSteam.Tests/MiniSteam.Tests.csproj" />
   <Project Path="MiniSteam/MiniSteam.csproj" />
 </Solution>

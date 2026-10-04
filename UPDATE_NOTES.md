@@ -102,3 +102,23 @@ appsettings.Production.json
 ## Database migration
 
 Required. See `MIGRATION_STEPS.md`.
+
+---
+
+# v3.0 desktop foundation
+
+- added `MiniSteam.Desktop` WPF project targeting .NET 10 Windows
+- added separate desktop DTO models; no direct backend project reference
+- added HttpClient API layer with ProblemDetails handling
+- added in-memory access/refresh session state
+- added automatic refresh-token rotation and one retry after 401
+- added Login window
+- added Store with pagination, search, and v2.8 discovery sections
+- added Game Details with artwork, screenshots, tags, requirements, and trailer launch
+- added authenticated Library view
+- added logout/revoke flow
+- added local asset URL normalization for `/images/...`
+- updated solution and CI to include the WPF project and `v3-development`
+- added `V3_DESKTOP_SETUP.md`
+
+Authoritative build/run validation must be completed in Visual Studio because the delivery environment does not include the .NET SDK.

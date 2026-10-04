@@ -1,6 +1,6 @@
-# MiniSteam project status after v2.9
+# MiniSteam project status
 
-## v2 web/backend
+## v2 web/backend — COMPLETE
 
 ```text
 MVC Store                     ✅
@@ -21,57 +21,56 @@ Store discovery               ✅
 Security hardening            ✅
 Unit/service tests            ✅
 HTTP integration tests        ✅
+39 / 39 automated tests       ✅
 ProblemDetails API contract   ✅
 Correlation IDs / logging     ✅
 Health checks                 ✅
 Pagination                    ✅
 GitHub Actions CI             ✅
 Docker baseline               ✅
+Manual v2.9 API regression    ✅
 ```
 
-## Remaining before declaring v2 complete
+The v2.9 migration, health/database checks, JWT login, refresh-token rotation/reuse rejection, pagination, and ProblemDetails behavior were manually verified before the v3 branch was created.
 
-The intended v2.9 workflow is:
+## v3 desktop — STARTED
 
-```text
-clean Build
-↓
-AddDesktopAuthV29 migration
-↓
-Update-Database
-↓
-37/37 tests
-↓
-manual auth/API regression
-↓
-Docker/CI files inspected
-↓
-commit
-```
-
-If these pass, v2 can be tagged as the completed web/backend line.
-
-## Next major branch: v3
+The first WPF client foundation is now present:
 
 ```text
-MiniSteam.exe
+MiniSteam.Desktop
 ↓
-WPF or Avalonia
+MVVM-style view models
 ↓
-MVVM
+HttpClient API boundary
 ↓
-HttpClient
+Login
 ↓
-Login / refresh-token session
+JWT + automatic refresh rotation
 ↓
-Store
+Store + pagination/search/sections
 ↓
 Game Details
 ↓
 Library
+↓
+Logout + refresh-token revoke
 ```
 
-After the basic desktop client works:
+### Current v3.0 validation status
+
+```text
+Source/package inspection     ✅
+WPF project created           ✅
+Added to MiniSteam.slnx       ✅
+CI updated for Windows/WPF    ✅
+Local Visual Studio build     ⏳ user validation required
+Desktop manual regression     ⏳ user validation required
+```
+
+The delivery environment used to prepare this patch does not contain the .NET SDK, so Visual Studio must perform the authoritative build/run check.
+
+## Later v3 stages
 
 ```text
 Wishlist
@@ -86,4 +85,4 @@ Launch
 Update
 ```
 
-That second block is the point where MiniSteam starts becoming a launcher/platform prototype rather than only a digital storefront.
+The second block is the point where MiniSteam evolves from a store client into a launcher/platform prototype.

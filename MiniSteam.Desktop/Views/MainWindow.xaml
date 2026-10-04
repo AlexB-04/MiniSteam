@@ -1,0 +1,73 @@
+<Window x:Class="MiniSteam.Desktop.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:MiniSteam.Desktop.ViewModels"
+        xmlns:views="clr-namespace:MiniSteam.Desktop.Views"
+        Title="MiniSteam Desktop"
+        MinWidth="980"
+        MinHeight="680"
+        Width="1240"
+        Height="820"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource WindowBackground}">
+    <Window.Resources>
+        <DataTemplate DataType="{x:Type vm:StoreViewModel}">
+            <views:StoreView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:LibraryViewModel}">
+            <views:LibraryView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:GameDetailsViewModel}">
+            <views:GameDetailsView />
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="72" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#171D25" BorderBrush="#2A475E" BorderThickness="0,0,0,1">
+            <Grid Margin="34,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,24,0">
+                    <Border Width="38" Height="38" CornerRadius="19" Background="#1A9FFF" Margin="0,0,10,0">
+                        <TextBlock Text="M" Foreground="White" FontWeight="Bold" FontSize="20"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Text="MINISTEAM" Foreground="White" FontSize="21" FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+
+                <Button Grid.Column="1" Content="STORE" Command="{Binding StoreCommand}" Style="{StaticResource NavButton}" />
+                <Button Grid.Column="2" Content="LIBRARY" Command="{Binding LibraryCommand}" Style="{StaticResource NavButton}" />
+
+                <TextBlock Grid.Column="4"
+                           Text="{Binding UserText}"
+                           VerticalAlignment="Center"
+                           Foreground="#8F98A0"
+                           Margin="16,0" />
+                <Button Grid.Column="5" Content="LOG OUT" Command="{Binding LogoutCommand}" Style="{StaticResource SecondaryButton}" Padding="14,8" />
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1">
+            <Border.Background>
+                <RadialGradientBrush Center="0.45,0" GradientOrigin="0.45,0" RadiusX="0.9" RadiusY="0.9">
+                    <GradientStop Color="#20364A" Offset="0" />
+                    <GradientStop Color="#10151D" Offset="0.64" />
+                </RadialGradientBrush>
+            </Border.Background>
+            <ContentControl Content="{Binding CurrentViewModel}" />
+        </Border>
+    </Grid>
+</Window>

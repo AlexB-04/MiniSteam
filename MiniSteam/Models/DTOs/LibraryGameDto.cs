@@ -12,6 +12,7 @@ namespace MiniSteam.Models.DTOs
         public string Developer { get; set; } = string.Empty;
         public string? Publisher { get; set; }
         public string? ImageUrl { get; set; }
+        public string? TrailerUrl { get; set; }
         public int? GenreId { get; set; }
         public string? GenreName { get; set; }
         public List<string> Tags { get; set; } = new();

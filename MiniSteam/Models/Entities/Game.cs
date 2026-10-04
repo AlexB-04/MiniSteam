@@ -34,6 +34,9 @@ namespace MiniSteam.Models.Entities
 
         public string? ImageUrl { get; set; }
 
+        [StringLength(500)]
+        public string? TrailerUrl { get; set; }
+
         public bool IsPublic { get; set; }
 
         public int? GenreId { get; set; }

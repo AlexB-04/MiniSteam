@@ -36,6 +36,9 @@ namespace MiniSteam.Models.DTOs
 
         public List<string> Screenshots { get; set; } = new();
 
+        [StringLength(500)]
+        public string? TrailerUrl { get; set; }
+
         [StringLength(4000)]
         public string? MinimumSystemRequirements { get; set; }
 

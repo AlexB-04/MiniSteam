@@ -1,4 +1,4 @@
-﻿@model IEnumerable<MiniSteam.Models.Entities.Game>
+@model IEnumerable<MiniSteam.Models.Entities.Game>
 
 @{
     ViewData["Title"] = "Store";
@@ -7,10 +7,16 @@
 
     var searchString = Context.Request.Query["searchString"].ToString();
     var genreId = Context.Request.Query["genreId"].ToString();
+    var tag = (ViewBag.ActiveTag as string) ?? Context.Request.Query["tag"].ToString();
+    var developer = (ViewBag.ActiveDeveloper as string) ?? Context.Request.Query["developer"].ToString();
+    var publisher = (ViewBag.ActivePublisher as string) ?? Context.Request.Query["publisher"].ToString();
 
     var hasFilters =
         !string.IsNullOrWhiteSpace(searchString) ||
-        !string.IsNullOrWhiteSpace(genreId);
+        !string.IsNullOrWhiteSpace(genreId) ||
+        !string.IsNullOrWhiteSpace(tag) ||
+        !string.IsNullOrWhiteSpace(developer) ||
+        !string.IsNullOrWhiteSpace(publisher);
 }
 
 <div class="store-page">
@@ -28,12 +34,26 @@
         </div>
     </div>
 
-
     <div class="steam-search-bar">
 
         <form asp-action="Store"
               method="get"
               class="steam-search-form">
+
+            @if (!string.IsNullOrWhiteSpace(tag))
+            {
+                <input type="hidden" name="tag" value="@tag" />
+            }
+
+            @if (!string.IsNullOrWhiteSpace(developer))
+            {
+                <input type="hidden" name="developer" value="@developer" />
+            }
+
+            @if (!string.IsNullOrWhiteSpace(publisher))
+            {
+                <input type="hidden" name="publisher" value="@publisher" />
+            }
 
             <div class="store-filter-field">
                 <span class="store-filter-label">Genre</span>
@@ -44,7 +64,6 @@
                     <option value="">All Genres</option>
                 </select>
             </div>
-
 
             <div class="store-filter-field store-search-field">
                 <span class="store-filter-label">Search</span>
@@ -63,7 +82,6 @@
                 </div>
             </div>
 
-
             @if (hasFilters)
             {
                 <a asp-action="Store"
@@ -74,14 +92,68 @@
 
         </form>
 
-    </div>
+        @if (hasFilters)
+        {
+            <div class="store-active-filters" aria-label="Active store filters">
+                <span class="store-active-filters-label">FILTERS</span>
 
+                @if (!string.IsNullOrWhiteSpace(tag))
+                {
+                    <a asp-action="Store"
+                       asp-route-searchString="@searchString"
+                       asp-route-genreId="@genreId"
+                       asp-route-developer="@developer"
+                       asp-route-publisher="@publisher"
+                       class="store-filter-chip">
+                        Tag: @tag <span>×</span>
+                    </a>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(developer))
+                {
+                    <a asp-action="Store"
+                       asp-route-searchString="@searchString"
+                       asp-route-genreId="@genreId"
+                       asp-route-tag="@tag"
+                       asp-route-publisher="@publisher"
+                       class="store-filter-chip">
+                        Developer: @developer <span>×</span>
+                    </a>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(publisher))
+                {
+                    <a asp-action="Store"
+                       asp-route-searchString="@searchString"
+                       asp-route-genreId="@genreId"
+                       asp-route-tag="@tag"
+                       asp-route-developer="@developer"
+                       class="store-filter-chip">
+                        Publisher: @publisher <span>×</span>
+                    </a>
+                }
+            </div>
+        }
+
+    </div>
 
     <div class="store-browse-header">
         <div>
             <span class="store-section-label">BROWSE</span>
             <h2>
-                @if (hasFilters)
+                @if (!string.IsNullOrWhiteSpace(tag))
+                {
+                    <text>Games tagged "@tag"</text>
+                }
+                else if (!string.IsNullOrWhiteSpace(developer))
+                {
+                    <text>Games by @developer</text>
+                }
+                else if (!string.IsNullOrWhiteSpace(publisher))
+                {
+                    <text>Published by @publisher</text>
+                }
+                else if (hasFilters)
                 {
                     <text>Search Results</text>
                 }
@@ -97,7 +169,6 @@
         </span>
     </div>
 
-
     <div class="store-results">
 
         @if (!games.Any())
@@ -109,8 +180,8 @@
                 <h3>No games found</h3>
 
                 <p>
-                    We couldn't find anything matching your search.
-                    Try another title or genre.
+                    We couldn't find anything matching the current filters.
+                    Try another title, genre, tag or developer.
                 </p>
 
                 <a asp-action="Store"
@@ -144,7 +215,6 @@
 
                     </div>
 
-
                     <div class="store-game-info">
 
                         <h4>@game.Name</h4>
@@ -170,9 +240,9 @@
                         @if (game.Tags.Any())
                         {
                             <div class="store-game-tags">
-                                @foreach (var tag in game.Tags.OrderBy(tag => tag.Name).Take(3))
+                                @foreach (var gameTag in game.Tags.OrderBy(item => item.Name).Take(3))
                                 {
-                                    <span>@tag.Name</span>
+                                    <span>@gameTag.Name</span>
                                 }
                             </div>
                         }
@@ -182,7 +252,6 @@
                         </span>
 
                     </div>
-
 
                     <div class="store-game-price-area">
 

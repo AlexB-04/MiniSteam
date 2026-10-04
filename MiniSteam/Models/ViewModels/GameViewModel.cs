@@ -46,6 +46,10 @@ namespace MiniSteam.Models.ViewModels
         [Display(Name = "Screenshot URLs")]
         public string? ScreenshotUrlsText { get; set; }
 
+        [StringLength(500)]
+        [Display(Name = "Trailer URL")]
+        public string? TrailerUrl { get; set; }
+
         [StringLength(4000)]
         [Display(Name = "Minimum System Requirements")]
         public string? MinimumSystemRequirements { get; set; }

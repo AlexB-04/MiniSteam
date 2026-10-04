@@ -148,7 +148,7 @@
 
                         <div>
                             <h2>Store Experience</h2>
-                            <p>Tags, screenshots and richer information for the game page.</p>
+                            <p>Tags, screenshots, trailer and richer information for the game page.</p>
                         </div>
                     </div>
 
@@ -164,6 +164,13 @@
                         <textarea asp-for="ScreenshotUrlsText" class="admin-form-input admin-form-textarea" rows="6" placeholder="https://example.com/screenshot-1.jpg&#10;https://example.com/screenshot-2.jpg"></textarea>
                         <span asp-validation-for="ScreenshotUrlsText" class="text-danger"></span>
                         <small>One URL per line. HTTP/HTTPS or a local /images/... path. Maximum 12.</small>
+                    </div>
+
+                    <div class="admin-field">
+                        <label asp-for="TrailerUrl">Trailer URL</label>
+                        <input asp-for="TrailerUrl" class="admin-form-input" placeholder="https://www.youtube.com/watch?v=..." />
+                        <span asp-validation-for="TrailerUrl" class="text-danger"></span>
+                        <small>YouTube watch/youtu.be/embed links or a direct MP4/WEBM URL.</small>
                     </div>
                 </section>
 

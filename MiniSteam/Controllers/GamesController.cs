@@ -100,6 +100,13 @@ namespace MiniSteam.Controllers
                     nameof(model.ScreenshotUrlsText),
                     "Each screenshot must be an http/https URL or a local path beginning with '/'.");
             }
+
+            if (!string.IsNullOrWhiteSpace(model.TrailerUrl) && !IsValidTrailerUrl(model.TrailerUrl))
+            {
+                ModelState.AddModelError(
+                    nameof(model.TrailerUrl),
+                    "Trailer must be an http/https URL. YouTube watch, youtu.be, embed, MP4 and WEBM URLs are supported.");
+            }
         }
 
         private static List<string> ParseTags(string? tagsText)
@@ -140,6 +147,12 @@ namespace MiniSteam.Controllers
             }
 
             return Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+        }
+
+        private static bool IsValidTrailerUrl(string url)
+        {
+            return Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri)
                 && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
         }
 
@@ -256,7 +269,12 @@ namespace MiniSteam.Controllers
             return View(games);
         }
 
-        public async Task<IActionResult> Store(string? searchString, int? genreId)
+        public async Task<IActionResult> Store(
+            string? searchString,
+            int? genreId,
+            string? tag,
+            string? developer,
+            string? publisher)
         {
             var games = _context.Games
                 .Include(game => game.Genre)
@@ -273,13 +291,35 @@ namespace MiniSteam.Controllers
                     game.Developer.Contains(search) ||
                     (game.Publisher != null && game.Publisher.Contains(search)) ||
                     (game.Genre != null && game.Genre.Name.Contains(search)) ||
-                    game.Tags.Any(tag => tag.Name.Contains(search)));
+                    game.Tags.Any(gameTag => gameTag.Name.Contains(search)));
             }
 
             if (genreId.HasValue)
             {
                 games = games.Where(game => game.GenreId == genreId.Value);
             }
+
+            if (!string.IsNullOrWhiteSpace(tag))
+            {
+                var normalizedTag = tag.Trim();
+                games = games.Where(game => game.Tags.Any(gameTag => gameTag.Name == normalizedTag));
+            }
+
+            if (!string.IsNullOrWhiteSpace(developer))
+            {
+                var normalizedDeveloper = developer.Trim();
+                games = games.Where(game => game.Developer == normalizedDeveloper);
+            }
+
+            if (!string.IsNullOrWhiteSpace(publisher))
+            {
+                var normalizedPublisher = publisher.Trim();
+                games = games.Where(game => game.Publisher == normalizedPublisher);
+            }
+
+            ViewBag.ActiveTag = tag?.Trim();
+            ViewBag.ActiveDeveloper = developer?.Trim();
+            ViewBag.ActivePublisher = publisher?.Trim();
 
             LoadGenreList(genreId);
 
@@ -457,6 +497,7 @@ namespace MiniSteam.Controllers
                     IsPublic = model.IsPublic,
                     GenreId = model.GenreId,
                     ImageUrl = imageUrl,
+                    TrailerUrl = model.TrailerUrl?.Trim(),
                     MinimumSystemRequirements = model.MinimumSystemRequirements?.Trim(),
                     RecommendedSystemRequirements = model.RecommendedSystemRequirements?.Trim()
                 };
@@ -516,6 +557,7 @@ namespace MiniSteam.Controllers
                 IsPublic = game.IsPublic,
                 GenreId = game.GenreId,
                 ExistingImageUrl = game.ImageUrl,
+                TrailerUrl = game.TrailerUrl,
                 TagsText = string.Join(", ", game.Tags.OrderBy(tag => tag.Name).Select(tag => tag.Name)),
                 ScreenshotUrlsText = string.Join(
                     Environment.NewLine,
@@ -568,6 +610,7 @@ namespace MiniSteam.Controllers
                 game.Publisher = model.Publisher?.Trim();
                 game.IsPublic = model.IsPublic;
                 game.GenreId = model.GenreId;
+                game.TrailerUrl = model.TrailerUrl?.Trim();
                 game.MinimumSystemRequirements = model.MinimumSystemRequirements?.Trim();
                 game.RecommendedSystemRequirements = model.RecommendedSystemRequirements?.Trim();
 

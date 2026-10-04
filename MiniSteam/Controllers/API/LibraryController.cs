@@ -44,6 +44,7 @@ namespace MiniSteam.Controllers.API
                     Developer = libraryGame.Game.Developer,
                     Publisher = libraryGame.Game.Publisher,
                     ImageUrl = libraryGame.Game.ImageUrl,
+                    TrailerUrl = libraryGame.Game.TrailerUrl,
                     GenreId = libraryGame.Game.GenreId,
                     GenreName = libraryGame.Game.Genre?.Name,
                     Tags = libraryGame.Game.Tags

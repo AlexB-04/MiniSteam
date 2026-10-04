@@ -25,7 +25,10 @@ namespace MiniSteam.Controllers.API
         [HttpGet]
         public async Task<IActionResult> GetGames(
             string? searchString,
-            int? genreId)
+            int? genreId,
+            string? tag,
+            string? developer,
+            string? publisher)
         {
             var games = _context.Games
                 .Include(game => game.Genre)
@@ -49,6 +52,24 @@ namespace MiniSteam.Controllers.API
             if (genreId.HasValue)
             {
                 games = games.Where(game => game.GenreId == genreId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(tag))
+            {
+                var normalizedTag = tag.Trim();
+                games = games.Where(game => game.Tags.Any(gameTag => gameTag.Name == normalizedTag));
+            }
+
+            if (!string.IsNullOrWhiteSpace(developer))
+            {
+                var normalizedDeveloper = developer.Trim();
+                games = games.Where(game => game.Developer == normalizedDeveloper);
+            }
+
+            if (!string.IsNullOrWhiteSpace(publisher))
+            {
+                var normalizedPublisher = publisher.Trim();
+                games = games.Where(game => game.Publisher == normalizedPublisher);
             }
 
             var result = await games
@@ -84,6 +105,11 @@ namespace MiniSteam.Controllers.API
             if (validationError != null)
             {
                 return BadRequest(validationError);
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.TrailerUrl) && !IsValidTrailerUrl(model.TrailerUrl))
+            {
+                return BadRequest("Trailer must be an http/https URL.");
             }
 
             if (string.IsNullOrWhiteSpace(model.Name))
@@ -128,6 +154,7 @@ namespace MiniSteam.Controllers.API
                 Publisher = model.Publisher?.Trim(),
                 GenreId = model.GenreId,
                 IsPublic = model.IsPublic,
+                TrailerUrl = model.TrailerUrl?.Trim(),
                 MinimumSystemRequirements = model.MinimumSystemRequirements?.Trim(),
                 RecommendedSystemRequirements = model.RecommendedSystemRequirements?.Trim()
             };
@@ -162,6 +189,11 @@ namespace MiniSteam.Controllers.API
             if (validationError != null)
             {
                 return BadRequest(validationError);
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.TrailerUrl) && !IsValidTrailerUrl(model.TrailerUrl))
+            {
+                return BadRequest("Trailer must be an http/https URL.");
             }
 
             var game = await _context.Games
@@ -216,6 +248,7 @@ namespace MiniSteam.Controllers.API
             game.Publisher = model.Publisher?.Trim();
             game.GenreId = model.GenreId;
             game.IsPublic = model.IsPublic;
+            game.TrailerUrl = model.TrailerUrl?.Trim();
             game.MinimumSystemRequirements = model.MinimumSystemRequirements?.Trim();
             game.RecommendedSystemRequirements = model.RecommendedSystemRequirements?.Trim();
 
@@ -324,6 +357,12 @@ namespace MiniSteam.Controllers.API
                 && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
         }
 
+        private static bool IsValidTrailerUrl(string url)
+        {
+            return Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri)
+                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+        }
+
         private async Task ApplyStoreContentAsync(
             Game game,
             IReadOnlyCollection<string> tagNames,
@@ -390,6 +429,7 @@ namespace MiniSteam.Controllers.API
                 Developer = game.Developer,
                 Publisher = game.Publisher,
                 ImageUrl = game.ImageUrl,
+                TrailerUrl = game.TrailerUrl,
                 GenreId = game.GenreId,
                 GenreName = game.Genre?.Name,
                 IsPublic = game.IsPublic,

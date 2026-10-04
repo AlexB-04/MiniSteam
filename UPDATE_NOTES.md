@@ -122,3 +122,18 @@ Required. See `MIGRATION_STEPS.md`.
 - added `V3_DESKTOP_SETUP.md`
 
 Authoritative build/run validation must be completed in Visual Studio because the delivery environment does not include the .NET SDK.
+
+---
+
+# v3.1 desktop commerce & reviews
+
+- expanded desktop `ApiClient` with PUT, DELETE, and bodyless POST support
+- added desktop Wishlist models/service/view model/view
+- added desktop Cart models/service/view model/view
+- added checkout through `POST /api/cart/checkout`
+- added review models and API service
+- added review list/summary/create/update/delete/vote UI to Game Details
+- added owned/wishlist/cart state to Game Details
+- added WISHLIST and CART top navigation
+- kept desktop/backend boundary HTTP-only; no backend project reference added
+- no EF Core model changes and no migration required

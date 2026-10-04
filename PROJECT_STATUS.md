@@ -19,10 +19,8 @@ Timed discounts               ✅
 Release states                ✅
 Store discovery               ✅
 Security hardening            ✅
-Unit/service tests            ✅
-HTTP integration tests        ✅
 39 / 39 automated tests       ✅
-ProblemDetails API contract   ✅
+ProblemDetails                ✅
 Correlation IDs / logging     ✅
 Health checks                 ✅
 Pagination                    ✅
@@ -31,58 +29,58 @@ Docker baseline               ✅
 Manual v2.9 API regression    ✅
 ```
 
-The v2.9 migration, health/database checks, JWT login, refresh-token rotation/reuse rejection, pagination, and ProblemDetails behavior were manually verified before the v3 branch was created.
-
-## v3 desktop — STARTED
-
-The first WPF client foundation is now present:
+## v3.0 desktop foundation — VALIDATED
 
 ```text
-MiniSteam.Desktop
-↓
-MVVM-style view models
-↓
-HttpClient API boundary
-↓
-Login
-↓
-JWT + automatic refresh rotation
-↓
-Store + pagination/search/sections
-↓
-Game Details
-↓
-Library
-↓
-Logout + refresh-token revoke
+WPF project                   ✅
+Solution build                ✅
+39 / 39 backend tests         ✅
+Desktop login                 ✅
+JWT authentication            ✅
+Store from REST API           ✅
+Search / sections / paging    ✅
+Game Details                  ✅
+Screenshots / requirements    ✅
+Library                       ✅
+Logout back to Login          ✅
 ```
 
-### Current v3.0 validation status
+The first real desktop client is working against the v2.9 backend rather than referencing backend code directly.
+
+## v3.1 desktop commerce & reviews — PATCH PREPARED
+
+This patch extends the already validated desktop foundation with the next user-facing API features:
 
 ```text
-Source/package inspection     ✅
-WPF project created           ✅
-Added to MiniSteam.slnx       ✅
-CI updated for Windows/WPF    ✅
-Local Visual Studio build     ⏳ user validation required
-Desktop manual regression     ⏳ user validation required
+Wishlist navigation           ✅ implemented in patch
+Wishlist add/remove           ✅ implemented in patch
+Wishlist → Cart               ✅ implemented in patch
+Cart navigation               ✅ implemented in patch
+Cart add/remove               ✅ implemented in patch
+Desktop checkout              ✅ implemented in patch
+Owned / wishlist / cart state ✅ implemented in Details
+Reviews list + summary        ✅ implemented in Details
+Create / update review        ✅ implemented in patch
+Delete own review             ✅ implemented in patch
+Helpful / not helpful voting  ✅ implemented in patch
 ```
 
-The delivery environment used to prepare this patch does not contain the .NET SDK, so Visual Studio must perform the authoritative build/run check.
+No database migration is required for v3.1 because the patch consumes API/database features that already exist in v2.9.
 
-## Later v3 stages
+## Next major stage after v3.1
 
 ```text
-Wishlist
-Cart
-Checkout
-Reviews
+v3.2 Desktop media/UX polish
 ↓
-Game builds
+v3.3 GameBuild
+↓
 Download
+↓
 Install
-Launch
-Update
+↓
+PLAY
+↓
+Updates
 ```
 
-The second block is the point where MiniSteam evolves from a store client into a launcher/platform prototype.
+`Download → Install → PLAY` is the major boundary where MiniSteam becomes a launcher/platform prototype rather than only a storefront client.

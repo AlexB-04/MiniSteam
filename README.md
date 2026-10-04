@@ -65,3 +65,22 @@ MiniSteam.Desktop/appsettings.json
 Then start `MiniSteam.Desktop` and sign in with an existing MiniSteam account.
 
 See `V3_DESKTOP_SETUP.md` for the first-run checklist and `API_V29.md` for the API contract inherited by the desktop client.
+
+---
+
+## v3.1 desktop commerce & reviews
+
+The next desktop increment consumes more of the API that already exists in the completed v2 backend:
+
+- Wishlist view, add/remove, and add-to-cart
+- Cart view, remove, total, and checkout
+- Store/Game Details ownership state
+- Game Details add/remove Wishlist
+- Game Details add/remove Cart
+- Reviews list and score summary
+- create/update/delete own review
+- helpful / not-helpful review voting
+
+No database migration is required for this desktop-only increment.
+
+See `V3_1_INSTALL.md` and `V3_1_TEST_CHECKLIST.md` before committing the patch.

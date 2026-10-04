@@ -62,7 +62,7 @@
                            TextWrapping="Wrap"
                            Margin="0,16,0,0" />
 
-                <TextBlock Text="Desktop v3.0 foundation"
+                <TextBlock Text="Desktop v3.1 · commerce &amp; reviews"
                            HorizontalAlignment="Center"
                            FontSize="11"
                            Margin="0,28,0,0" />

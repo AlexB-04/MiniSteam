@@ -1,73 +1,40 @@
-# MiniSteam v3.0 desktop foundation — static audit
+# MiniSteam v3 desktop static audit
 
-## Scope
+## v3.0 foundation status
 
-This audit covers the first `MiniSteam.Desktop` WPF foundation added on top of the completed v2.9 backend snapshot.
-
-## Verified in the delivery environment
+User-side Visual Studio validation already confirmed:
 
 ```text
-Original MiniSteam backend files unchanged      ✅ 239 / 239 hashes identical
-Original MiniSteam.Tests files unchanged        ✅ 11 / 11 hashes identical
-MiniSteam.Desktop project added                 ✅
-MiniSteam.Desktop added to MiniSteam.slnx       ✅
-WPF XAML files are well-formed XML              ✅
-Project / solution XML is well-formed           ✅
-C# delimiter/static structure scan              ✅
-Desktop appsettings contains no token/password  ✅
-CI includes v3-development                      ✅
-CI moved to Windows runner for WPF build        ✅
-Patch ZIP integrity                             checked during packaging
-Reference ZIP integrity                         checked during packaging
+solution build              ✅
+39 / 39 backend tests       ✅
+desktop login               ✅
+Store from API              ✅
+Game Details                ✅
+Library                     ✅
+logout → Login              ✅
 ```
 
-## Not verified here
+## v3.1 patch scope
 
-The preparation environment does **not** contain the .NET SDK or Visual Studio, so the following must be validated on the user's Windows machine:
+The patch extends only the WPF client and documentation. It consumes API capabilities that already exist in v2.9.
 
 ```text
-dotnet/Visual Studio restore
-WPF XAML compilation
-C# compilation
-39 backend tests after solution expansion
-runtime login
-runtime refresh-token rotation
-runtime Store/Details/Library UI
-runtime logout/revoke
+Wishlist                    added
+Cart                        added
+Checkout                    added
+Reviews                     added
+Details commerce state      added
 ```
 
-## Architecture introduced
+## Static verification performed in preparation environment
 
 ```text
-MiniSteam.Desktop
-├── Commands
-├── Configuration
-├── Models
-├── Services
-├── ViewModels
-└── Views
-
-WPF UI
-  ↓
-ViewModels
-  ↓
-Services / ApiClient
-  ↓ HTTP JSON
-MiniSteam v2.9 REST API
+all XAML files well-formed XML        ✅
+MiniSteam.slnx well-formed XML        ✅
+MiniSteam.Desktop.csproj valid XML    ✅
+ASP.NET backend source unchanged      ✅
+MiniSteam.Tests source unchanged      ✅
+no new EF migration required          ✅
 ```
 
-The desktop project does not reference `MiniSteam.csproj`; DTOs are intentionally duplicated at the client boundary so the desktop application behaves as a real external API consumer.
-
-## Security notes
-
-- access and refresh tokens are in memory only
-- refresh tokens are rotated through `/api/auth/refresh`
-- authenticated requests retry at most once after refresh
-- logout calls `/api/auth/revoke`
-- tokens are not persisted to disk
-- API base URL defaults to local HTTPS
-- no TLS certificate bypass was added
-
-## First authoritative check
-
-Open `MiniSteam.slnx` and run **Build Solution** before any further v3 work. If the build is clean, run the existing 39 backend tests and then follow `V3_DESKTOP_SETUP.md`.
+The preparation environment does not contain the .NET SDK, therefore C# compilation and WPF XAML compilation must still be confirmed in Visual Studio after copying v3.1.

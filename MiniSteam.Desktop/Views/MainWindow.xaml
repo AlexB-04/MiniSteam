@@ -4,10 +4,10 @@
         xmlns:vm="clr-namespace:MiniSteam.Desktop.ViewModels"
         xmlns:views="clr-namespace:MiniSteam.Desktop.Views"
         Title="MiniSteam Desktop"
-        MinWidth="980"
-        MinHeight="680"
-        Width="1240"
-        Height="820"
+        MinWidth="1080"
+        MinHeight="700"
+        Width="1380"
+        Height="860"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource WindowBackground}">
     <Window.Resources>
@@ -16,6 +16,12 @@
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:LibraryViewModel}">
             <views:LibraryView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:WishlistViewModel}">
+            <views:WishlistView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CartViewModel}">
+            <views:CartView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:GameDetailsViewModel}">
             <views:GameDetailsView />
@@ -31,6 +37,8 @@
         <Border Grid.Row="0" Background="#171D25" BorderBrush="#2A475E" BorderThickness="0,0,0,1">
             <Grid Margin="34,0">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
@@ -50,13 +58,15 @@
 
                 <Button Grid.Column="1" Content="STORE" Command="{Binding StoreCommand}" Style="{StaticResource NavButton}" />
                 <Button Grid.Column="2" Content="LIBRARY" Command="{Binding LibraryCommand}" Style="{StaticResource NavButton}" />
+                <Button Grid.Column="3" Content="WISHLIST" Command="{Binding WishlistCommand}" Style="{StaticResource NavButton}" />
+                <Button Grid.Column="4" Content="CART" Command="{Binding CartCommand}" Style="{StaticResource NavButton}" />
 
-                <TextBlock Grid.Column="4"
+                <TextBlock Grid.Column="6"
                            Text="{Binding UserText}"
                            VerticalAlignment="Center"
                            Foreground="#8F98A0"
                            Margin="16,0" />
-                <Button Grid.Column="5" Content="LOG OUT" Command="{Binding LogoutCommand}" Style="{StaticResource SecondaryButton}" Padding="14,8" />
+                <Button Grid.Column="7" Content="LOG OUT" Command="{Binding LogoutCommand}" Style="{StaticResource SecondaryButton}" Padding="14,8" />
             </Grid>
         </Border>
 

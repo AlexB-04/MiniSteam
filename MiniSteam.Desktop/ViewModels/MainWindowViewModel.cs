@@ -9,6 +9,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     private readonly ServiceRegistry _services;
     private readonly StoreViewModel _storeViewModel;
     private readonly LibraryViewModel _libraryViewModel;
+    private readonly WishlistViewModel _wishlistViewModel;
+    private readonly CartViewModel _cartViewModel;
     private ViewModelBase _currentViewModel;
 
     public MainWindowViewModel(ServiceRegistry services)
@@ -17,10 +19,14 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         _storeViewModel = new StoreViewModel(services.GamesService, OpenGameFromStoreAsync);
         _libraryViewModel = new LibraryViewModel(services.LibraryService, OpenGameFromLibraryAsync);
+        _wishlistViewModel = new WishlistViewModel(services.WishlistService, services.CartService, OpenGameFromWishlistAsync);
+        _cartViewModel = new CartViewModel(services.CartService, OpenGameFromCartAsync);
         _currentViewModel = _storeViewModel;
 
         StoreCommand = new AsyncRelayCommand(ShowStoreAsync);
         LibraryCommand = new AsyncRelayCommand(ShowLibraryAsync);
+        WishlistCommand = new AsyncRelayCommand(ShowWishlistAsync);
+        CartCommand = new AsyncRelayCommand(ShowCartAsync);
         LogoutCommand = new AsyncRelayCommand(LogoutAsync);
     }
 
@@ -44,6 +50,8 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public AsyncRelayCommand StoreCommand { get; }
     public AsyncRelayCommand LibraryCommand { get; }
+    public AsyncRelayCommand WishlistCommand { get; }
+    public AsyncRelayCommand CartCommand { get; }
     public AsyncRelayCommand LogoutCommand { get; }
 
     public async Task InitializeAsync()
@@ -67,21 +75,68 @@ public sealed class MainWindowViewModel : ViewModelBase
         await _libraryViewModel.LoadAsync();
     }
 
-    private async Task OpenGameFromStoreAsync(GameDto game)
+    private async Task ShowWishlistAsync()
     {
-        await OpenGameAsync(game.Id, () => CurrentViewModel = _storeViewModel);
+        CurrentViewModel = _wishlistViewModel;
+        await _wishlistViewModel.LoadAsync();
     }
 
-    private async Task OpenGameFromLibraryAsync(int gameId)
+    private async Task ShowCartAsync()
     {
-        await OpenGameAsync(gameId, () => CurrentViewModel = _libraryViewModel);
+        CurrentViewModel = _cartViewModel;
+        await _cartViewModel.LoadAsync();
     }
 
-    private async Task OpenGameAsync(int gameId, Action goBack)
+    private Task OpenGameFromStoreAsync(GameDto game) =>
+        OpenGameAsync(game.Id, ReturnToStoreAsync);
+
+    private Task OpenGameFromLibraryAsync(int gameId) =>
+        OpenGameAsync(gameId, ReturnToLibraryAsync);
+
+    private Task OpenGameFromWishlistAsync(int gameId) =>
+        OpenGameAsync(gameId, ReturnToWishlistAsync);
+
+    private Task OpenGameFromCartAsync(int gameId) =>
+        OpenGameAsync(gameId, ReturnToCartAsync);
+
+    private async Task OpenGameAsync(int gameId, Func<Task> goBack)
     {
-        var details = new GameDetailsViewModel(_services.GamesService, gameId, goBack);
+        var details = new GameDetailsViewModel(
+            _services.GamesService,
+            _services.LibraryService,
+            _services.WishlistService,
+            _services.CartService,
+            _services.ReviewsService,
+            gameId,
+            goBack);
+
         CurrentViewModel = details;
         await details.LoadAsync();
+    }
+
+
+    private Task ReturnToStoreAsync()
+    {
+        CurrentViewModel = _storeViewModel;
+        return Task.CompletedTask;
+    }
+
+    private async Task ReturnToLibraryAsync()
+    {
+        CurrentViewModel = _libraryViewModel;
+        await _libraryViewModel.LoadAsync();
+    }
+
+    private async Task ReturnToWishlistAsync()
+    {
+        CurrentViewModel = _wishlistViewModel;
+        await _wishlistViewModel.LoadAsync();
+    }
+
+    private async Task ReturnToCartAsync()
+    {
+        CurrentViewModel = _cartViewModel;
+        await _cartViewModel.LoadAsync();
     }
 
     private async Task LogoutAsync()

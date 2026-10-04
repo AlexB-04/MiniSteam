@@ -75,6 +75,49 @@ public sealed class ApiClient
         }
     }
 
+    public async Task<TResponse> PostAsync<TResponse>(
+        string relativeUrl,
+        bool authenticated = false,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await SendAsync(
+            () => new HttpRequestMessage(HttpMethod.Post, relativeUrl),
+            authenticated,
+            cancellationToken);
+
+        return await ReadSuccessAsync<TResponse>(response, cancellationToken);
+    }
+
+    public async Task<TResponse> PutAsync<TRequest, TResponse>(
+        string relativeUrl,
+        TRequest body,
+        bool authenticated = false,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await SendAsync(
+            () => CreateJsonRequest(HttpMethod.Put, relativeUrl, body),
+            authenticated,
+            cancellationToken);
+
+        return await ReadSuccessAsync<TResponse>(response, cancellationToken);
+    }
+
+    public async Task DeleteAsync(
+        string relativeUrl,
+        bool authenticated = false,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await SendAsync(
+            () => new HttpRequestMessage(HttpMethod.Delete, relativeUrl),
+            authenticated,
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await CreateApiExceptionAsync(response, cancellationToken);
+        }
+    }
+
     public string? ResolveAssetUrl(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))

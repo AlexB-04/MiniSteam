@@ -1,8 +1,22 @@
 # MiniSteam v3 desktop setup
 
-## What v3.0 adds
+## Current desktop stage
 
-A new WPF project lives beside the existing web/backend and test projects:
+v3.0 foundation was validated locally:
+
+```text
+Build                      ✅
+39 / 39 backend tests       ✅
+Login                       ✅
+Store from API              ✅
+Game Details                ✅
+Library                     ✅
+Logout                      ✅
+```
+
+v3.1 extends that foundation with Wishlist, Cart, Checkout, and Reviews.
+
+## Solution
 
 ```text
 MiniSteam.slnx
@@ -11,76 +25,31 @@ MiniSteam.slnx
 └── MiniSteam.Desktop/  WPF desktop client
 ```
 
-The desktop project does not reference the ASP.NET project. It communicates only through the public HTTP API, which keeps the client/server boundary real.
+## Run
 
-## First run
-
-1. Open `MiniSteam.slnx`.
-2. Make sure the backend still starts with the HTTPS profile. That profile exposes both:
-   - `https://localhost:7161`
-   - `http://localhost:5219`
-3. Start `MiniSteam` first.
-4. Start `MiniSteam.Desktop` in a second Visual Studio instance, or configure multiple startup projects.
-5. Sign in with an existing MiniSteam account.
-
-The desktop development URL is configured in:
+Configure multiple startup projects:
 
 ```text
-MiniSteam.Desktop/appsettings.json
+MiniSteam          → Start
+MiniSteam.Desktop  → Start
+MiniSteam.Tests    → None
 ```
 
-Default:
-
-```json
-{
-  "Api": {
-    "BaseUrl": "https://localhost:7161/"
-  }
-}
-```
-
-The client uses the trusted ASP.NET Core development certificate. If Windows does not trust it, run `dotnet dev-certs https --trust` once and restart the backend/client. Production must also use HTTPS.
-
-## v3.0 manual checklist
+The local desktop API URL remains:
 
 ```text
-Backend /health/ready is Healthy
-Desktop project builds
-Login succeeds
-Wrong password shows API error
-Store loads paged games
-Search works
-Store section buttons work
-Game card opens Details
-Relative /images/... artwork loads from backend
-External artwork/screenshots load
-Trailer button opens browser
-Library loads with JWT
-Access token refreshes automatically when required
-Logout revokes the current refresh token and returns to Login
+https://localhost:7161/
 ```
 
-## Security behavior
+## v3.1
 
-- access and refresh tokens currently live only in memory
-- refresh-token rotation is handled by `ApiClient`
-- API requests retry once after a successful refresh
-- logout calls `/api/auth/revoke`
-- tokens are not written to `appsettings.json`, logs, or plaintext files
+No migration is required.
 
-Persistent login is deliberately not implemented yet. When added later, the refresh token should be stored with Windows-protected storage rather than a plain text file.
+After applying the patch:
 
-## v3 scope
+1. Build Solution.
+2. Run all 39 backend tests.
+3. Run both backend and desktop.
+4. Follow `V3_1_TEST_CHECKLIST.md`.
 
-The initial desktop milestone is intentionally narrow:
-
-```text
-Login
-JWT + refresh rotation
-Store
-Game Details
-Library
-Logout/revoke
-```
-
-Wishlist, Cart, Checkout, Reviews, downloads, installation, launching, and updates remain later v3 stages.
+Persistent login is still intentionally not implemented. Tokens stay in memory only until protected Windows storage is introduced later.

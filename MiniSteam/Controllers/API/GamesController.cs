@@ -348,19 +348,29 @@ namespace MiniSteam.Controllers.API
 
         private static bool IsValidScreenshotUrl(string url)
         {
-            if (url.StartsWith('/'))
+            if (IsSafeLocalMediaPath(url))
             {
                 return true;
             }
 
             return Uri.TryCreate(url, UriKind.Absolute, out var uri)
-                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+                && string.IsNullOrEmpty(uri.UserInfo);
         }
 
         private static bool IsValidTrailerUrl(string url)
         {
             return Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri)
-                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+                && string.IsNullOrEmpty(uri.UserInfo);
+        }
+
+        private static bool IsSafeLocalMediaPath(string url)
+        {
+            return url.StartsWith('/')
+                && !url.StartsWith("//", StringComparison.Ordinal)
+                && !url.Contains('\\')
+                && !url.Any(char.IsControl);
         }
 
         private async Task ApplyStoreContentAsync(

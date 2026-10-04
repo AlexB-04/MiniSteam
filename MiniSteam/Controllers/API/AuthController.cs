@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using MiniSteam.Models.DTOs;
 using MiniSteam.Models.Entities;
@@ -29,6 +30,7 @@ namespace MiniSteam.Controllers.API
         }
 
         [HttpPost("register")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> Register([FromBody] RegisterDto model)
         {
             var email = model.Email.Trim();
@@ -58,7 +60,16 @@ namespace MiniSteam.Controllers.API
                 });
             }
 
-            await _userManager.AddToRoleAsync(user, "User");
+            var roleResult = await _userManager.AddToRoleAsync(user, "User");
+
+            if (!roleResult.Succeeded)
+            {
+                await _userManager.DeleteAsync(user);
+
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Unable to finish account registration.");
+            }
 
             var tokenResponse = await CreateTokenResponseAsync(user);
 
@@ -68,9 +79,11 @@ namespace MiniSteam.Controllers.API
         }
 
         [HttpPost("login")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
-            var user = await _userManager.FindByEmailAsync(model.Email);
+            var email = model.Email.Trim();
+            var user = await _userManager.FindByEmailAsync(email);
 
             if (user == null)
             {

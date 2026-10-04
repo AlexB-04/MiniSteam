@@ -1,19 +1,14 @@
-﻿using Microsoft.AspNetCore.Identity;
-using MiniSteam.Models.Entities;
+using Microsoft.AspNetCore.Identity;
 
 namespace MiniSteam.Data
 {
     public class SeedDb
     {
         private readonly RoleManager<IdentityRole> _roleManager;
-        private readonly UserManager<User> _userManager;
 
-        public SeedDb(
-            RoleManager<IdentityRole> roleManager,
-            UserManager<User> userManager)
+        public SeedDb(RoleManager<IdentityRole> roleManager)
         {
             _roleManager = roleManager;
-            _userManager = userManager;
         }
 
         public async Task SeedAsync()
@@ -28,12 +23,10 @@ namespace MiniSteam.Data
                 await _roleManager.CreateAsync(new IdentityRole("User"));
             }
 
-            var admin = await _userManager.FindByEmailAsync("alex@test.local");
-
-            if (admin != null && !await _userManager.IsInRoleAsync(admin, "Admin"))
-            {
-                await _userManager.AddToRoleAsync(admin, "Admin");
-            }
+            // Security note:
+            // Do not automatically promote a hard-coded email address to Admin here.
+            // Existing Admin users keep their role in the database. New Admin accounts
+            // should be assigned deliberately rather than by matching a public email value.
         }
     }
 }

@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.WebUtilities;
 using MiniSteam.Models.Entities;
 using MiniSteam.Models.ViewModels;
 using System.Text;
+using System.Net;
 using MiniSteam.Helpers;
 
 namespace MiniSteam.Controllers
@@ -36,6 +38,7 @@ namespace MiniSteam.Controllers
         // POST: Account/Register
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
             if (!ModelState.IsValid)
@@ -43,17 +46,32 @@ namespace MiniSteam.Controllers
                 return View(model);
             }
 
+            var email = model.Email.Trim();
+
             var user = new User
             {
-                Email = model.Email,
-                UserName = model.Email
+                Email = email,
+                UserName = email
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
 
             if (result.Succeeded)
             {
-                await _userManager.AddToRoleAsync(user, "User");
+                var roleResult = await _userManager.AddToRoleAsync(user, "User");
+
+                if (!roleResult.Succeeded)
+                {
+                    await _userManager.DeleteAsync(user);
+
+                    foreach (var error in roleResult.Errors)
+                    {
+                        ModelState.AddModelError(string.Empty, error.Description);
+                    }
+
+                    return View(model);
+                }
+
                 await _signInManager.SignInAsync(user, isPersistent: false);
 
                 return RedirectToAction("Store", "Games");
@@ -77,6 +95,7 @@ namespace MiniSteam.Controllers
         // POST: Account/Login
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
             if (!ModelState.IsValid)
@@ -84,8 +103,10 @@ namespace MiniSteam.Controllers
                 return View(model);
             }
 
+            var email = model.Email.Trim();
+
             var result = await _signInManager.PasswordSignInAsync(
-                model.Email,
+                email,
                 model.Password,
                 model.RememberMe,
                 lockoutOnFailure: true);
@@ -175,6 +196,7 @@ namespace MiniSteam.Controllers
         // POST: Account/ForgotPassword
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
         {
             if (!ModelState.IsValid)
@@ -182,7 +204,8 @@ namespace MiniSteam.Controllers
                 return View(model);
             }
 
-            var user = await _userManager.FindByEmailAsync(model.Email);
+            var email = model.Email.Trim();
+            var user = await _userManager.FindByEmailAsync(email);
 
             if (user == null)
             {
@@ -199,7 +222,7 @@ namespace MiniSteam.Controllers
                 "Account",
                 new
                 {
-                    email = model.Email,
+                    email,
                     token = encodedToken
                 },
                 Request.Scheme);
@@ -211,7 +234,9 @@ namespace MiniSteam.Controllers
                 return View(model);
             }
 
-            var response = _mailHelper.SendEmail(model.Email,
+            var safeResetLink = WebUtility.HtmlEncode(resetLink);
+
+            _mailHelper.SendEmail(email,
                 "MiniSteam Password Reset",
                 $"""
                 <h1>MiniSteam Password Reset</h1>
@@ -219,21 +244,14 @@ namespace MiniSteam.Controllers
                 <p>You requested a password reset for your MiniSteam account.</p>
 
                 <p>
-                    <a href="{resetLink}">Reset Password</a>
+                    <a href="{safeResetLink}">Reset Password</a>
                 </p>
 
                 <p>If you did not request this password reset, you can ignore this email.</p>
                 """);
 
-            if (!response.IsSuccess)
-            {
-                ModelState.AddModelError(
-                    string.Empty,
-                    "Unable to send the password reset email.");
-
-                return View(model);
-            }
-
+            // Always show the same confirmation response. This avoids revealing
+            // whether an account exists or whether delivery failed internally.
             return RedirectToAction(nameof(ForgotPasswordConfirmation));
         }
 
@@ -266,6 +284,7 @@ namespace MiniSteam.Controllers
         // POST: Account/ResetPassword
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
         {
             if (!ModelState.IsValid)
@@ -273,7 +292,8 @@ namespace MiniSteam.Controllers
                 return View(model);
             }
 
-            var user = await _userManager.FindByEmailAsync(model.Email);
+            var email = model.Email.Trim();
+            var user = await _userManager.FindByEmailAsync(email);
 
             // Не раскрываем, существует ли такой email.
             if (user == null)

@@ -56,7 +56,40 @@ namespace MiniSteam.Controllers
             return AllowedImageExtensions.Contains(extension)
                 && AllowedImageContentTypes.Contains(contentType)
                 && file.Length > 0
-                && file.Length <= MaxImageSize;
+                && file.Length <= MaxImageSize
+                && HasValidImageSignature(file, extension);
+        }
+
+        private static bool HasValidImageSignature(IFormFile file, string extension)
+        {
+            Span<byte> header = stackalloc byte[12];
+
+            using var stream = file.OpenReadStream();
+            var bytesRead = stream.Read(header);
+
+            return extension switch
+            {
+                ".jpg" or ".jpeg" =>
+                    bytesRead >= 3 &&
+                    header[0] == 0xFF &&
+                    header[1] == 0xD8 &&
+                    header[2] == 0xFF,
+
+                ".png" =>
+                    bytesRead >= 8 &&
+                    header[..8].SequenceEqual(new byte[]
+                    {
+                        0x89, 0x50, 0x4E, 0x47,
+                        0x0D, 0x0A, 0x1A, 0x0A
+                    }),
+
+                ".webp" =>
+                    bytesRead >= 12 &&
+                    header[..4].SequenceEqual("RIFF"u8) &&
+                    header[8..12].SequenceEqual("WEBP"u8),
+
+                _ => false
+            };
         }
 
         private void LoadGenreList(int? selectedGenreId = null)
@@ -141,19 +174,29 @@ namespace MiniSteam.Controllers
 
         private static bool IsValidScreenshotUrl(string url)
         {
-            if (url.StartsWith('/'))
+            if (IsSafeLocalMediaPath(url))
             {
                 return true;
             }
 
             return Uri.TryCreate(url, UriKind.Absolute, out var uri)
-                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+                && string.IsNullOrEmpty(uri.UserInfo);
         }
 
         private static bool IsValidTrailerUrl(string url)
         {
             return Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri)
-                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+                && string.IsNullOrEmpty(uri.UserInfo);
+        }
+
+        private static bool IsSafeLocalMediaPath(string url)
+        {
+            return url.StartsWith('/')
+                && !url.StartsWith("//", StringComparison.Ordinal)
+                && !url.Contains('\\')
+                && !url.Any(char.IsControl);
         }
 
         private async Task ApplyStoreContentAsync(

@@ -1,4 +1,5 @@
-﻿using MailKit.Net.Smtp;
+using MailKit.Net.Smtp;
+using MailKit.Security;
 using MimeKit;
 
 namespace MiniSteam.Helpers
@@ -6,10 +7,14 @@ namespace MiniSteam.Helpers
     public class MailHelper : IMailHelper
     {
         private readonly IConfiguration _configuration;
+        private readonly ILogger<MailHelper> _logger;
 
-        public MailHelper(IConfiguration configuration)
+        public MailHelper(
+            IConfiguration configuration,
+            ILogger<MailHelper> logger)
         {
             _configuration = configuration;
+            _logger = logger;
         }
 
         public Response SendEmail(string to, string subject, string body)
@@ -17,19 +22,22 @@ namespace MiniSteam.Helpers
             var nameFrom = _configuration["Mail:NameFrom"];
             var from = _configuration["Mail:From"];
             var smtp = _configuration["Mail:Smtp"];
-            var port = _configuration["Mail:Port"];
+            var portText = _configuration["Mail:Port"];
             var password = _configuration["Mail:Password"];
 
             if (string.IsNullOrWhiteSpace(nameFrom) ||
                 string.IsNullOrWhiteSpace(from) ||
                 string.IsNullOrWhiteSpace(smtp) ||
-                string.IsNullOrWhiteSpace(port) ||
-                string.IsNullOrWhiteSpace(password))
+                string.IsNullOrWhiteSpace(portText) ||
+                string.IsNullOrWhiteSpace(password) ||
+                !int.TryParse(portText, out var port))
             {
+                _logger.LogWarning("Mail configuration is incomplete or invalid.");
+
                 return new Response
                 {
                     IsSuccess = false,
-                    Message = "Mail configuration is incomplete."
+                    Message = "Unable to send email."
                 };
             }
 
@@ -50,19 +58,22 @@ namespace MiniSteam.Helpers
             {
                 using var client = new SmtpClient();
 
-                client.Connect(smtp, int.Parse(port), false);
+                // Port 587 is intended for explicit STARTTLS. Using StartTls here
+                // prevents silently sending credentials over an unencrypted SMTP session.
+                client.Connect(smtp, port, SecureSocketOptions.StartTls);
                 client.Authenticate(from, password);
 
                 client.Send(message);
-
                 client.Disconnect(true);
             }
             catch (Exception exception)
             {
+                _logger.LogError(exception, "Unable to send MiniSteam email.");
+
                 return new Response
                 {
                     IsSuccess = false,
-                    Message = exception.Message
+                    Message = "Unable to send email."
                 };
             }
 

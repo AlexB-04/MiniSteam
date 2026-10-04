@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MiniSteam.Data;
+using MiniSteam.Helpers;
 using MiniSteam.Models.DTOs;
 using MiniSteam.Models.Entities;
 
@@ -13,13 +14,18 @@ namespace MiniSteam.Controllers.API
     public class GamesController : ControllerBase
     {
         private readonly DataContext _context;
+        private readonly ILogger<GamesController> _logger;
 
         private const int MaxTags = 20;
         private const int MaxScreenshots = 12;
+        private const int MaxPageSize = 100;
 
-        public GamesController(DataContext context)
+        public GamesController(
+            DataContext context,
+            ILogger<GamesController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -29,86 +35,87 @@ namespace MiniSteam.Controllers.API
             string? tag,
             string? developer,
             string? publisher,
-            string? section)
+            string? section,
+            CancellationToken cancellationToken)
         {
-            var games = _context.Games
-                .Include(game => game.Genre)
-                .Include(game => game.Tags)
-                .Include(game => game.Screenshots)
-                .Where(game => game.IsPublic)
-                .AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(searchString))
-            {
-                var search = searchString.Trim();
-
-                games = games.Where(game =>
-                    game.Name.Contains(search) ||
-                    game.Developer.Contains(search) ||
-                    (game.Publisher != null && game.Publisher.Contains(search)) ||
-                    (game.Genre != null && game.Genre.Name.Contains(search)) ||
-                    game.Tags.Any(tag => tag.Name.Contains(search)));
-            }
-
-            if (genreId.HasValue)
-            {
-                games = games.Where(game => game.GenreId == genreId.Value);
-            }
-
-            if (!string.IsNullOrWhiteSpace(tag))
-            {
-                var normalizedTag = tag.Trim();
-                games = games.Where(game => game.Tags.Any(gameTag => gameTag.Name == normalizedTag));
-            }
-
-            if (!string.IsNullOrWhiteSpace(developer))
-            {
-                var normalizedDeveloper = developer.Trim();
-                games = games.Where(game => game.Developer == normalizedDeveloper);
-            }
-
-            if (!string.IsNullOrWhiteSpace(publisher))
-            {
-                var normalizedPublisher = publisher.Trim();
-                games = games.Where(game => game.Publisher == normalizedPublisher);
-            }
-
-            var today = DateTime.Today;
-
-            games = section?.Trim().ToLowerInvariant() switch
-            {
-                "featured" => games.Where(game => game.IsFeatured),
-                "specials" => games.Where(game =>
-                    game.Price > 0 &&
-                    game.ReleaseStatus != GameReleaseStatus.ComingSoon &&
-                    game.DiscountPercent > 0 &&
-                    (!game.DiscountStartDate.HasValue || game.DiscountStartDate.Value <= today) &&
-                    (!game.DiscountEndDate.HasValue || game.DiscountEndDate.Value >= today)),
-                "new" => games.Where(game =>
-                    game.ReleaseStatus == GameReleaseStatus.Released &&
-                    game.ReleaseDate >= today.AddDays(-90) &&
-                    game.ReleaseDate <= today),
-                "earlyaccess" => games.Where(game =>
-                    game.ReleaseStatus == GameReleaseStatus.EarlyAccess),
-                "free" => games.Where(game =>
-                    game.Price == 0 &&
-                    game.ReleaseStatus != GameReleaseStatus.ComingSoon),
-                "comingsoon" => games.Where(game =>
-                    game.ReleaseStatus == GameReleaseStatus.ComingSoon),
-                _ => games
-            };
-
-            var result = await games
+            var result = await BuildPublicGamesQuery(
+                    searchString,
+                    genreId,
+                    tag,
+                    developer,
+                    publisher,
+                    section)
                 .OrderBy(game => game.Name)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             return Ok(result.Select(ToDto));
+        }
+
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetGamesPaged(
+            string? searchString,
+            int? genreId,
+            string? tag,
+            string? developer,
+            string? publisher,
+            string? section,
+            int page = 1,
+            int pageSize = 20,
+            CancellationToken cancellationToken = default)
+        {
+            if (page < 1)
+            {
+                return this.ApiProblem(
+                    StatusCodes.Status400BadRequest,
+                    "Invalid page.",
+                    "Page must be 1 or greater.",
+                    "InvalidPagination");
+            }
+
+            if (pageSize < 1 || pageSize > MaxPageSize)
+            {
+                return this.ApiProblem(
+                    StatusCodes.Status400BadRequest,
+                    "Invalid page size.",
+                    $"Page size must be between 1 and {MaxPageSize}.",
+                    "InvalidPagination");
+            }
+
+            var query = BuildPublicGamesQuery(
+                searchString,
+                genreId,
+                tag,
+                developer,
+                publisher,
+                section);
+
+            var totalItems = await query.CountAsync(cancellationToken);
+
+            var items = await query
+                .OrderBy(game => game.Name)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            var totalPages = totalItems == 0
+                ? 0
+                : (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            return Ok(new PagedResultDto<GameDto>
+            {
+                Items = items.Select(ToDto).ToList(),
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = totalPages
+            });
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetGame(int id)
         {
             var game = await _context.Games
+                .AsNoTracking()
                 .Include(game => game.Genre)
                 .Include(game => game.Tags)
                 .Include(game => game.Screenshots)
@@ -130,12 +137,12 @@ namespace MiniSteam.Controllers.API
 
             if (validationError != null)
             {
-                return BadRequest(validationError);
+                return this.ApiProblem(StatusCodes.Status400BadRequest, "Invalid store content.", validationError, "ValidationError");
             }
 
             if (!string.IsNullOrWhiteSpace(model.TrailerUrl) && !IsValidTrailerUrl(model.TrailerUrl))
             {
-                return BadRequest("Trailer must be an http/https URL.");
+                return this.ApiProblem(StatusCodes.Status400BadRequest, "Invalid trailer URL.", "Trailer must be an http/https URL.", "ValidationError");
             }
 
             var scheduleError = ValidateCommercialState(
@@ -147,17 +154,17 @@ namespace MiniSteam.Controllers.API
 
             if (scheduleError != null)
             {
-                return BadRequest(scheduleError);
+                return this.ApiProblem(StatusCodes.Status400BadRequest, "Invalid commercial state.", scheduleError, "ValidationError");
             }
 
             if (string.IsNullOrWhiteSpace(model.Name))
             {
-                return BadRequest("The game name is required.");
+                return this.ApiProblem(StatusCodes.Status400BadRequest, "Invalid game.", "The game name is required.", "ValidationError");
             }
 
             if (string.IsNullOrWhiteSpace(model.Developer))
             {
-                return BadRequest("The developer is required.");
+                return this.ApiProblem(StatusCodes.Status400BadRequest, "Invalid game.", "The developer is required.", "ValidationError");
             }
 
             var normalizedName = model.Name.Trim();
@@ -167,7 +174,7 @@ namespace MiniSteam.Controllers.API
 
             if (gameExists)
             {
-                return Conflict("A game with that name already exists.");
+                return this.ApiProblem(StatusCodes.Status409Conflict, "Game already exists.", "A game with that name already exists.", "Conflict");
             }
 
             if (model.GenreId.HasValue)
@@ -177,7 +184,7 @@ namespace MiniSteam.Controllers.API
 
                 if (!genreExists)
                 {
-                    return BadRequest("The selected genre does not exist.");
+                    return this.ApiProblem(StatusCodes.Status400BadRequest, "Invalid genre.", "The selected genre does not exist.", "ValidationError");
                 }
             }
 
@@ -221,6 +228,11 @@ namespace MiniSteam.Controllers.API
                     .LoadAsync();
             }
 
+            _logger.LogInformation(
+                "Admin created game {GameId}: {GameName}",
+                game.Id,
+                game.Name);
+
             return StatusCode(
                 StatusCodes.Status201Created,
                 ToDto(game));
@@ -234,12 +246,12 @@ namespace MiniSteam.Controllers.API
 
             if (validationError != null)
             {
-                return BadRequest(validationError);
+                return this.ApiProblem(StatusCodes.Status400BadRequest, "Invalid store content.", validationError, "ValidationError");
             }
 
             if (!string.IsNullOrWhiteSpace(model.TrailerUrl) && !IsValidTrailerUrl(model.TrailerUrl))
             {
-                return BadRequest("Trailer must be an http/https URL.");
+                return this.ApiProblem(StatusCodes.Status400BadRequest, "Invalid trailer URL.", "Trailer must be an http/https URL.", "ValidationError");
             }
 
             var scheduleError = ValidateCommercialState(
@@ -251,7 +263,7 @@ namespace MiniSteam.Controllers.API
 
             if (scheduleError != null)
             {
-                return BadRequest(scheduleError);
+                return this.ApiProblem(StatusCodes.Status400BadRequest, "Invalid commercial state.", scheduleError, "ValidationError");
             }
 
             var game = await _context.Games
@@ -266,12 +278,12 @@ namespace MiniSteam.Controllers.API
 
             if (string.IsNullOrWhiteSpace(model.Name))
             {
-                return BadRequest("The game name is required.");
+                return this.ApiProblem(StatusCodes.Status400BadRequest, "Invalid game.", "The game name is required.", "ValidationError");
             }
 
             if (string.IsNullOrWhiteSpace(model.Developer))
             {
-                return BadRequest("The developer is required.");
+                return this.ApiProblem(StatusCodes.Status400BadRequest, "Invalid game.", "The developer is required.", "ValidationError");
             }
 
             var normalizedName = model.Name.Trim();
@@ -283,7 +295,7 @@ namespace MiniSteam.Controllers.API
 
             if (gameExists)
             {
-                return Conflict("A game with that name already exists.");
+                return this.ApiProblem(StatusCodes.Status409Conflict, "Game already exists.", "A game with that name already exists.", "Conflict");
             }
 
             if (model.GenreId.HasValue)
@@ -293,7 +305,7 @@ namespace MiniSteam.Controllers.API
 
                 if (!genreExists)
                 {
-                    return BadRequest("The selected genre does not exist.");
+                    return this.ApiProblem(StatusCodes.Status400BadRequest, "Invalid genre.", "The selected genre does not exist.", "ValidationError");
                 }
             }
 
@@ -329,6 +341,11 @@ namespace MiniSteam.Controllers.API
                 ? await _context.Genres.FirstOrDefaultAsync(genre => genre.Id == game.GenreId.Value)
                 : null;
 
+            _logger.LogInformation(
+                "Admin updated game {GameId}: {GameName}",
+                game.Id,
+                game.Name);
+
             return Ok(ToDto(game));
         }
 
@@ -349,16 +366,99 @@ namespace MiniSteam.Controllers.API
 
             if (isPurchased)
             {
-                return Conflict("This game cannot be deleted because it exists in purchase history.");
+                return this.ApiProblem(StatusCodes.Status409Conflict, "Game cannot be deleted.", "This game cannot be deleted because it exists in purchase history.", "Conflict");
             }
 
             _context.Games.Remove(game);
             await _context.SaveChangesAsync();
 
+            _logger.LogInformation(
+                "Admin deleted game {GameId}: {GameName}",
+                game.Id,
+                game.Name);
+
             return Ok(new
             {
                 message = "Game deleted successfully."
             });
+        }
+
+        private IQueryable<Game> BuildPublicGamesQuery(
+            string? searchString,
+            int? genreId,
+            string? tag,
+            string? developer,
+            string? publisher,
+            string? section)
+        {
+            var games = _context.Games
+                .AsNoTracking()
+                .Include(game => game.Genre)
+                .Include(game => game.Tags)
+                .Include(game => game.Screenshots)
+                .Where(game => game.IsPublic)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchString))
+            {
+                var search = searchString.Trim();
+
+                games = games.Where(game =>
+                    game.Name.Contains(search) ||
+                    game.Developer.Contains(search) ||
+                    (game.Publisher != null && game.Publisher.Contains(search)) ||
+                    (game.Genre != null && game.Genre.Name.Contains(search)) ||
+                    game.Tags.Any(gameTag => gameTag.Name.Contains(search)));
+            }
+
+            if (genreId.HasValue)
+            {
+                games = games.Where(game => game.GenreId == genreId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(tag))
+            {
+                var normalizedTag = tag.Trim();
+                games = games.Where(game =>
+                    game.Tags.Any(gameTag => gameTag.Name == normalizedTag));
+            }
+
+            if (!string.IsNullOrWhiteSpace(developer))
+            {
+                var normalizedDeveloper = developer.Trim();
+                games = games.Where(game => game.Developer == normalizedDeveloper);
+            }
+
+            if (!string.IsNullOrWhiteSpace(publisher))
+            {
+                var normalizedPublisher = publisher.Trim();
+                games = games.Where(game => game.Publisher == normalizedPublisher);
+            }
+
+            var today = DateTime.Today;
+
+            return section?.Trim().ToLowerInvariant() switch
+            {
+                "featured" => games.Where(game => game.IsFeatured),
+                "specials" => games.Where(game =>
+                    game.Price > 0 &&
+                    game.ReleaseStatus != GameReleaseStatus.ComingSoon &&
+                    game.DiscountPercent > 0 &&
+                    (!game.DiscountStartDate.HasValue || game.DiscountStartDate.Value <= today) &&
+                    (!game.DiscountEndDate.HasValue || game.DiscountEndDate.Value >= today)),
+                "new" => games.Where(game =>
+                    game.ReleaseStatus == GameReleaseStatus.Released &&
+                    game.ReleaseDate >= today.AddDays(-90) &&
+                    game.ReleaseDate <= today),
+                "earlyaccess" => games.Where(game =>
+                    game.ReleaseStatus == GameReleaseStatus.EarlyAccess),
+                "free" => games.Where(game =>
+                    game.Price == 0 &&
+                    game.ReleaseStatus != GameReleaseStatus.ComingSoon),
+                "comingsoon" => games.Where(game =>
+                    game.ReleaseStatus == GameReleaseStatus.ComingSoon),
+                _ => games
+            };
         }
 
         private static string? ValidateCommercialState(

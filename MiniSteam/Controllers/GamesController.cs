@@ -14,6 +14,7 @@ namespace MiniSteam.Controllers
         private readonly DataContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly UserManager<User> _userManager;
+        private readonly ILogger<GamesController> _logger;
 
         private static readonly string[] AllowedImageExtensions =
         {
@@ -37,11 +38,13 @@ namespace MiniSteam.Controllers
         public GamesController(
             DataContext context,
             IWebHostEnvironment webHostEnvironment,
-            UserManager<User> userManager)
+            UserManager<User> userManager,
+            ILogger<GamesController> logger)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
             _userManager = userManager;
+            _logger = logger;
         }
 
         private bool IsValidImage(IFormFile file)
@@ -681,6 +684,11 @@ namespace MiniSteam.Controllers
                     throw;
                 }
 
+                _logger.LogInformation(
+                    "MVC admin created game {GameId}: {GameName}",
+                    game.Id,
+                    game.Name);
+
                 return RedirectToAction(nameof(Index));
             }
 
@@ -818,6 +826,11 @@ namespace MiniSteam.Controllers
                     DeleteLocalGameImage(oldImageUrlToDelete);
                 }
 
+                _logger.LogInformation(
+                    "MVC admin updated game {GameId}: {GameName}",
+                    game.Id,
+                    game.Name);
+
                 return RedirectToAction(nameof(Index));
             }
 
@@ -873,6 +886,12 @@ namespace MiniSteam.Controllers
             }
 
             DeleteLocalGameImage(imageUrl);
+
+            _logger.LogInformation(
+                "MVC admin deleted game {GameId}: {GameName}",
+                game.Id,
+                game.Name);
+
             return RedirectToAction(nameof(Index));
         }
     }

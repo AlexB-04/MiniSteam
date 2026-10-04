@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MiniSteam.Helpers;
 using MiniSteam.Models.DTOs;
 using MiniSteam.Models.Entities;
 using MiniSteam.Services;
@@ -62,24 +63,11 @@ namespace MiniSteam.Controllers.API
                 gameId,
                 User.IsInRole("Admin"));
 
-            if (result.Status == ServiceResultStatus.NotFound)
-            {
-                return NotFound();
-            }
-
-            if (result.Status == ServiceResultStatus.AlreadyOwned)
-            {
-                return BadRequest(result.Message);
-            }
-
-            if (result.Status == ServiceResultStatus.Conflict)
-            {
-                return Conflict(result.Message);
-            }
-
             if (!result.Succeeded || result.Value == null)
             {
-                return BadRequest(result.Message ?? "Unable to add this game to the cart.");
+                return this.FromServiceFailure(
+                    result,
+                    "Game could not be added to the cart.");
             }
 
             return Ok(ToDto(result.Value));
@@ -97,9 +85,11 @@ namespace MiniSteam.Controllers.API
 
             var result = await _cartService.RemoveAsync(userId, gameId);
 
-            if (result.Status == ServiceResultStatus.NotFound)
+            if (!result.Succeeded)
             {
-                return NotFound();
+                return this.FromServiceFailure(
+                    result,
+                    "Game could not be removed from the cart.");
             }
 
             return Ok(new { message = "Game removed from cart." });
@@ -121,7 +111,9 @@ namespace MiniSteam.Controllers.API
 
             if (!result.Succeeded || result.Value == null)
             {
-                return BadRequest(result.Message ?? "Checkout could not be completed.");
+                return this.FromServiceFailure(
+                    result,
+                    "Checkout could not be completed.");
             }
 
             return Ok(ToPurchaseDto(result.Value));

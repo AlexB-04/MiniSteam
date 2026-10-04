@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MiniSteam.Helpers;
 using MiniSteam.Models.DTOs;
 using MiniSteam.Models.Entities;
 using MiniSteam.Services;
@@ -51,24 +52,11 @@ namespace MiniSteam.Controllers.API
                 gameId,
                 User.IsInRole("Admin"));
 
-            if (result.Status == ServiceResultStatus.NotFound)
-            {
-                return NotFound();
-            }
-
-            if (result.Status == ServiceResultStatus.AlreadyOwned)
-            {
-                return BadRequest(result.Message);
-            }
-
-            if (result.Status == ServiceResultStatus.Conflict)
-            {
-                return Conflict(result.Message);
-            }
-
             if (!result.Succeeded || result.Value == null)
             {
-                return BadRequest(result.Message ?? "Purchase could not be completed.");
+                return this.FromServiceFailure(
+                    result,
+                    "Purchase could not be completed.");
             }
 
             return Ok(ToDto(result.Value));

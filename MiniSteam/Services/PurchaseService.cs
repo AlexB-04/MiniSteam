@@ -7,10 +7,14 @@ namespace MiniSteam.Services
     public class PurchaseService : IPurchaseService
     {
         private readonly DataContext _context;
+        private readonly ILogger<PurchaseService> _logger;
 
-        public PurchaseService(DataContext context)
+        public PurchaseService(
+            DataContext context,
+            ILogger<PurchaseService>? logger = null)
         {
             _context = context;
+            _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<PurchaseService>.Instance;
         }
 
         public async Task<List<Purchase>> GetPurchaseHistoryAsync(string userId)
@@ -115,6 +119,13 @@ namespace MiniSteam.Services
             _context.Purchases.Add(purchase);
             await _context.SaveChangesAsync();
 
+            _logger.LogInformation(
+                "Direct purchase completed. PurchaseId: {PurchaseId}, UserId: {UserId}, GameId: {GameId}, Total: {TotalPrice}",
+                purchase.Id,
+                userId,
+                gameId,
+                purchase.TotalPrice);
+
             return ServiceResult<Purchase>.Success(purchase);
         }
 
@@ -202,6 +213,13 @@ namespace MiniSteam.Services
             _context.CartItems.RemoveRange(cartItems);
 
             await _context.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Cart checkout completed. PurchaseId: {PurchaseId}, UserId: {UserId}, ItemCount: {ItemCount}, Total: {TotalPrice}",
+                purchase.Id,
+                userId,
+                purchase.PurchaseItems.Count,
+                purchase.TotalPrice);
 
             return ServiceResult<Purchase>.Success(purchase);
         }

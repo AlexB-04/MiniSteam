@@ -1,6 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MiniSteam.Data;
+using MiniSteam.Helpers;
 using MiniSteam.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using MiniSteam.Models.Entities;
@@ -61,7 +62,7 @@ namespace MiniSteam.Controllers.API
         {
             if (string.IsNullOrWhiteSpace(model.Name))
             {
-                return BadRequest("The genre name is required.");
+                return this.ApiProblem(StatusCodes.Status400BadRequest, "Invalid genre.", "The genre name is required.", "ValidationError");
             }
 
             bool genreExists = await _context.Genres
@@ -69,7 +70,7 @@ namespace MiniSteam.Controllers.API
 
             if (genreExists)
             {
-                return BadRequest("A genre with that name already exists.");
+                return this.ApiProblem(StatusCodes.Status409Conflict, "Genre already exists.", "A genre with that name already exists.", "Conflict");
             }
 
             var genre = new Genre
@@ -101,7 +102,7 @@ namespace MiniSteam.Controllers.API
 
             if (string.IsNullOrWhiteSpace(model.Name))
             {
-                return BadRequest("The genre name is required.");
+                return this.ApiProblem(StatusCodes.Status400BadRequest, "Invalid genre.", "The genre name is required.", "ValidationError");
             }
 
             bool genreExists = await _context.Genres
@@ -111,7 +112,7 @@ namespace MiniSteam.Controllers.API
 
             if (genreExists)
             {
-                return BadRequest("A genre with that name already exists.");
+                return this.ApiProblem(StatusCodes.Status409Conflict, "Genre already exists.", "A genre with that name already exists.", "Conflict");
             }
 
             genre.Name = model.Name.Trim();
@@ -142,8 +143,7 @@ namespace MiniSteam.Controllers.API
 
             if (isUsed)
             {
-                return BadRequest("This genre cannot be deleted because it is used by one or more games."
-                );
+                return this.ApiProblem(StatusCodes.Status409Conflict, "Genre is in use.", "This genre cannot be deleted because it is used by one or more games.", "Conflict");
             }
 
             _context.Genres.Remove(genre);

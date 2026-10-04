@@ -3,10 +3,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.IdentityModel.Tokens;
+using MiniSteam.Helpers;
 using MiniSteam.Models.DTOs;
 using MiniSteam.Models.Entities;
-using System.IdentityModel.Tokens.Jwt;
+using MiniSteam.Services;
 using System.Security.Claims;
 
 namespace MiniSteam.Controllers.API
@@ -17,29 +17,37 @@ namespace MiniSteam.Controllers.API
     {
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
-        private readonly IConfiguration _configuration;
+        private readonly IJwtTokenService _tokenService;
+        private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             UserManager<User> userManager,
             SignInManager<User> signInManager,
-            IConfiguration configuration)
+            IJwtTokenService tokenService,
+            ILogger<AuthController> logger)
         {
             _userManager = userManager;
             _signInManager = signInManager;
-            _configuration = configuration;
+            _tokenService = tokenService;
+            _logger = logger;
         }
 
         [HttpPost("register")]
         [EnableRateLimiting("auth")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto model)
+        public async Task<IActionResult> Register(
+            [FromBody] RegisterDto model,
+            CancellationToken cancellationToken)
         {
             var email = model.Email.Trim();
-
             var existingUser = await _userManager.FindByEmailAsync(email);
 
             if (existingUser != null)
             {
-                return Conflict("An account with that email already exists.");
+                return this.ApiProblem(
+                    StatusCodes.Status409Conflict,
+                    "Account already exists.",
+                    "An account with that email already exists.",
+                    "AccountExists");
             }
 
             var user = new User
@@ -52,12 +60,11 @@ namespace MiniSteam.Controllers.API
 
             if (!result.Succeeded)
             {
-                return BadRequest(new
-                {
-                    errors = result.Errors
-                        .Select(error => error.Description)
-                        .ToList()
-                });
+                return this.ApiProblem(
+                    StatusCodes.Status400BadRequest,
+                    "Registration failed.",
+                    string.Join(" ", result.Errors.Select(error => error.Description)),
+                    "IdentityValidation");
             }
 
             var roleResult = await _userManager.AddToRoleAsync(user, "User");
@@ -66,28 +73,49 @@ namespace MiniSteam.Controllers.API
             {
                 await _userManager.DeleteAsync(user);
 
-                return StatusCode(
+                _logger.LogError(
+                    "Unable to assign the User role during API registration for {UserId}",
+                    user.Id);
+
+                return this.ApiProblem(
                     StatusCodes.Status500InternalServerError,
-                    "Unable to finish account registration.");
+                    "Registration could not be completed.",
+                    "The account could not be initialized.",
+                    "RoleAssignmentFailed");
             }
 
-            var tokenResponse = await CreateTokenResponseAsync(user);
+            var tokenResponse = await _tokenService.CreateTokenPairAsync(
+                user,
+                GetClientIp(),
+                cancellationToken);
 
-            return StatusCode(
-                StatusCodes.Status201Created,
-                tokenResponse);
+            _logger.LogInformation(
+                "API account registered for user {UserId}",
+                user.Id);
+
+            return StatusCode(StatusCodes.Status201Created, tokenResponse);
         }
 
         [HttpPost("login")]
         [EnableRateLimiting("auth")]
-        public async Task<IActionResult> Login([FromBody] LoginDto model)
+        public async Task<IActionResult> Login(
+            [FromBody] LoginDto model,
+            CancellationToken cancellationToken)
         {
             var email = model.Email.Trim();
             var user = await _userManager.FindByEmailAsync(email);
 
             if (user == null)
             {
-                return Unauthorized("Invalid email or password.");
+                _logger.LogWarning(
+                    "API login failed for unknown email from {IpAddress}",
+                    GetClientIp());
+
+                return this.ApiProblem(
+                    StatusCodes.Status401Unauthorized,
+                    "Authentication failed.",
+                    "Invalid email or password.",
+                    "InvalidCredentials");
             }
 
             var result = await _signInManager.CheckPasswordSignInAsync(
@@ -97,10 +125,81 @@ namespace MiniSteam.Controllers.API
 
             if (!result.Succeeded)
             {
-                return Unauthorized("Invalid email or password.");
+                _logger.LogWarning(
+                    "API login failed for user {UserId}. LockedOut: {LockedOut}",
+                    user.Id,
+                    result.IsLockedOut);
+
+                return this.ApiProblem(
+                    StatusCodes.Status401Unauthorized,
+                    "Authentication failed.",
+                    "Invalid email or password.",
+                    result.IsLockedOut ? "AccountLocked" : "InvalidCredentials");
             }
 
-            return Ok(await CreateTokenResponseAsync(user));
+            var tokenResponse = await _tokenService.CreateTokenPairAsync(
+                user,
+                GetClientIp(),
+                cancellationToken);
+
+            _logger.LogInformation(
+                "API login succeeded for user {UserId}",
+                user.Id);
+
+            return Ok(tokenResponse);
+        }
+
+        [HttpPost("refresh")]
+        [EnableRateLimiting("auth")]
+        public async Task<IActionResult> Refresh(
+            [FromBody] RefreshTokenRequestDto model,
+            CancellationToken cancellationToken)
+        {
+            var result = await _tokenService.RefreshAsync(
+                model.RefreshToken,
+                GetClientIp(),
+                cancellationToken);
+
+            if (!result.Succeeded || result.Value == null)
+            {
+                return this.ApiProblem(
+                    StatusCodes.Status401Unauthorized,
+                    "Session refresh failed.",
+                    "The refresh token is invalid or expired.",
+                    "InvalidRefreshToken");
+            }
+
+            return Ok(result.Value);
+        }
+
+        [HttpPost("revoke")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> Revoke(
+            [FromBody] RevokeTokenRequestDto model,
+            CancellationToken cancellationToken)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized();
+            }
+
+            var result = await _tokenService.RevokeAsync(
+                model.RefreshToken,
+                userId,
+                GetClientIp(),
+                cancellationToken);
+
+            if (!result.Succeeded)
+            {
+                return this.FromServiceFailure(result, "Session could not be revoked.");
+            }
+
+            return Ok(new
+            {
+                message = "Refresh token revoked successfully."
+            });
         }
 
         [HttpGet("me")]
@@ -117,52 +216,9 @@ namespace MiniSteam.Controllers.API
             });
         }
 
-        private async Task<object> CreateTokenResponseAsync(User user)
+        private string? GetClientIp()
         {
-            var roles = await _userManager.GetRolesAsync(user);
-
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Name, user.UserName ?? user.Email ?? user.Id),
-                new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
-
-            foreach (var role in roles)
-            {
-                claims.Add(new Claim(ClaimTypes.Role, role));
-            }
-
-            var jwtKey = _configuration["Jwt:Key"];
-
-            if (string.IsNullOrWhiteSpace(jwtKey))
-            {
-                throw new InvalidOperationException("JWT key is not configured.");
-            }
-
-            var key = new SymmetricSecurityKey(
-                Convert.FromBase64String(jwtKey));
-
-            var credentials = new SigningCredentials(
-                key,
-                SecurityAlgorithms.HmacSha256);
-
-            var expiresAt = DateTime.UtcNow.AddHours(1);
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: claims,
-                expires: expiresAt,
-                signingCredentials: credentials);
-
-            return new
-            {
-                token = new JwtSecurityTokenHandler().WriteToken(token),
-                expiresAt,
-                roles
-            };
+            return HttpContext.Connection.RemoteIpAddress?.ToString();
         }
     }
 }

@@ -108,24 +108,11 @@ namespace MiniSteam.Controllers.API
                 model.Content,
                 model.IsRecommended!.Value);
 
-            if (result.Status == ServiceResultStatus.NotFound)
-            {
-                return NotFound();
-            }
-
-            if (result.Status == ServiceResultStatus.Forbidden)
-            {
-                return Forbid();
-            }
-
-            if (result.Status == ServiceResultStatus.Conflict)
-            {
-                return Conflict(result.Message);
-            }
-
             if (!result.Succeeded || result.Value == null)
             {
-                return BadRequest(result.Message ?? "Review could not be created.");
+                return this.FromServiceFailure(
+                    result,
+                    "Review could not be created.");
             }
 
             return Ok(ToDto(result.Value));
@@ -148,19 +135,11 @@ namespace MiniSteam.Controllers.API
                 model.Content,
                 model.IsRecommended!.Value);
 
-            if (result.Status == ServiceResultStatus.NotFound)
-            {
-                return NotFound();
-            }
-
-            if (result.Status == ServiceResultStatus.Forbidden)
-            {
-                return Forbid();
-            }
-
             if (!result.Succeeded || result.Value == null)
             {
-                return BadRequest(result.Message ?? "Review could not be updated.");
+                return this.FromServiceFailure(
+                    result,
+                    "Review could not be updated.");
             }
 
             return Ok(ToDto(result.Value));
@@ -179,7 +158,7 @@ namespace MiniSteam.Controllers.API
 
             if (!model.IsHelpful.HasValue)
             {
-                return BadRequest("Vote value is required.");
+                return this.ApiProblem(StatusCodes.Status400BadRequest, "Invalid review vote.", "Vote value is required.", "ValidationError");
             }
 
             var result = await _reviewService.VoteAsync(
@@ -187,19 +166,11 @@ namespace MiniSteam.Controllers.API
                 id,
                 model.IsHelpful.Value);
 
-            if (result.Status == ServiceResultStatus.NotFound)
-            {
-                return NotFound();
-            }
-
-            if (result.Status == ServiceResultStatus.Forbidden)
-            {
-                return Forbid();
-            }
-
             if (!result.Succeeded || result.Value == null)
             {
-                return BadRequest(result.Message ?? "Review vote could not be saved.");
+                return this.FromServiceFailure(
+                    result,
+                    "Review vote could not be saved.");
             }
 
             return Ok(ToDto(result.Value));
@@ -218,19 +189,11 @@ namespace MiniSteam.Controllers.API
 
             var result = await _reviewService.DeleteAsync(userId, id);
 
-            if (result.Status == ServiceResultStatus.NotFound)
-            {
-                return NotFound();
-            }
-
-            if (result.Status == ServiceResultStatus.Forbidden)
-            {
-                return Forbid();
-            }
-
             if (!result.Succeeded)
             {
-                return BadRequest(result.Message ?? "Review could not be deleted.");
+                return this.FromServiceFailure(
+                    result,
+                    "Review could not be deleted.");
             }
 
             return Ok(new { message = "Review deleted successfully." });

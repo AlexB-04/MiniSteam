@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MiniSteam.Helpers;
 using MiniSteam.Models.DTOs;
 using MiniSteam.Models.Entities;
 using MiniSteam.Services;
@@ -54,24 +55,11 @@ namespace MiniSteam.Controllers.API
                 gameId,
                 User.IsInRole("Admin"));
 
-            if (result.Status == ServiceResultStatus.NotFound)
-            {
-                return NotFound();
-            }
-
-            if (result.Status == ServiceResultStatus.AlreadyOwned)
-            {
-                return BadRequest(result.Message);
-            }
-
-            if (result.Status == ServiceResultStatus.Conflict)
-            {
-                return Conflict(result.Message);
-            }
-
             if (!result.Succeeded || result.Value == null)
             {
-                return BadRequest(result.Message ?? "Unable to add this game to the wishlist.");
+                return this.FromServiceFailure(
+                    result,
+                    "Game could not be added to the wishlist.");
             }
 
             return Ok(ToDto(result.Value));
@@ -89,9 +77,11 @@ namespace MiniSteam.Controllers.API
 
             var result = await _wishlistService.RemoveAsync(userId, gameId);
 
-            if (result.Status == ServiceResultStatus.NotFound)
+            if (!result.Succeeded)
             {
-                return NotFound();
+                return this.FromServiceFailure(
+                    result,
+                    "Game could not be removed from the wishlist.");
             }
 
             return Ok(new { message = "Game removed from wishlist." });

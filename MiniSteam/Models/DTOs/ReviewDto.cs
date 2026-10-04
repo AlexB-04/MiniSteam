@@ -8,5 +8,7 @@ namespace MiniSteam.Models.DTOs
         public bool IsRecommended { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public int HelpfulCount { get; set; }
+        public int NotHelpfulCount { get; set; }
     }
 }

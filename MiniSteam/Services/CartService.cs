@@ -75,6 +75,13 @@ namespace MiniSteam.Services
                 return ServiceResult<CartItem>.Fail(ServiceResultStatus.NotFound);
             }
 
+            if (!game.IsPurchasable)
+            {
+                return ServiceResult<CartItem>.Fail(
+                    ServiceResultStatus.InvalidOperation,
+                    "This game is coming soon and cannot be added to the cart yet.");
+            }
+
             var alreadyOwned = await _context.LibraryGames
                 .AnyAsync(libraryGame =>
                     libraryGame.UserId == userId &&

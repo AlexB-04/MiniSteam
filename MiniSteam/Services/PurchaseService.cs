@@ -41,6 +41,13 @@ namespace MiniSteam.Services
                 return ServiceResult<Purchase>.Fail(ServiceResultStatus.NotFound);
             }
 
+            if (!game.IsPurchasable)
+            {
+                return ServiceResult<Purchase>.Fail(
+                    ServiceResultStatus.InvalidOperation,
+                    "This game is coming soon and cannot be purchased yet.");
+            }
+
             var alreadyOwned = await _context.LibraryGames
                 .AnyAsync(libraryGame =>
                     libraryGame.UserId == userId &&
@@ -132,6 +139,13 @@ namespace MiniSteam.Services
                 return ServiceResult<Purchase>.Fail(
                     ServiceResultStatus.InvalidOperation,
                     "One or more games in the cart are no longer available.");
+            }
+
+            if (cartItems.Any(cartItem => !cartItem.Game.IsPurchasable))
+            {
+                return ServiceResult<Purchase>.Fail(
+                    ServiceResultStatus.InvalidOperation,
+                    "One or more games in the cart are coming soon and cannot be purchased yet.");
             }
 
             var gameIds = cartItems

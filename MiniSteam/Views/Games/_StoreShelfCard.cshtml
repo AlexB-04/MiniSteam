@@ -1,0 +1,63 @@
+@model MiniSteam.Models.Entities.Game
+@using MiniSteam.Models.Entities
+
+<a asp-action="Details"
+   asp-controller="Games"
+   asp-route-id="@Model.Id"
+   asp-route-from="store"
+   class="store-shelf-card">
+
+    <div class="store-shelf-image">
+        <img src="@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? "/images/noimage.jpg" : Model.ImageUrl)"
+             alt="@Model.Name" />
+
+        @if (Model.ReleaseStatus == GameReleaseStatus.ComingSoon)
+        {
+            <span class="store-shelf-badge store-shelf-badge-coming">COMING SOON</span>
+        }
+        else if (Model.ReleaseStatus == GameReleaseStatus.EarlyAccess)
+        {
+            <span class="store-shelf-badge store-shelf-badge-early">EARLY ACCESS</span>
+        }
+        else if (Model.HasDiscount)
+        {
+            <span class="store-shelf-badge store-shelf-badge-sale">-@Model.ActiveDiscountPercent%</span>
+        }
+        else if (Model.Price == 0)
+        {
+            <span class="store-shelf-badge store-shelf-badge-free">FREE</span>
+        }
+    </div>
+
+    <div class="store-shelf-info">
+        <strong>@Model.Name</strong>
+
+        <span>
+            @(Model.Genre?.Name ?? "Uncategorized")
+            @if (!string.IsNullOrWhiteSpace(Model.Developer))
+            {
+                <text> · @Model.Developer</text>
+            }
+        </span>
+
+        <div class="store-shelf-price">
+            @if (Model.ReleaseStatus == GameReleaseStatus.ComingSoon)
+            {
+                <span>Coming @Model.ReleaseDate.ToString("dd MMM yyyy")</span>
+            }
+            else if (Model.Price == 0)
+            {
+                <span class="store-shelf-free">Free</span>
+            }
+            else if (Model.HasDiscount)
+            {
+                <del>@Model.Price.ToString("0.00") €</del>
+                <span>@Model.FinalPrice.ToString("0.00") €</span>
+            }
+            else
+            {
+                <span>@Model.FinalPrice.ToString("0.00") €</span>
+            }
+        </div>
+    </div>
+</a>

@@ -192,6 +192,53 @@ namespace MiniSteam.Controllers
             return RedirectToAction("Details", "Games", new { id = result.Value.GameId });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Vote(
+            int id,
+            int gameId,
+            bool isHelpful)
+        {
+            var user = await _userManager.GetUserAsync(User);
+
+            if (user == null)
+            {
+                return Unauthorized();
+            }
+
+            var result = await _reviewService.VoteAsync(
+                user.Id,
+                id,
+                isHelpful);
+
+            if (result.Status == ServiceResultStatus.NotFound)
+            {
+                return NotFound();
+            }
+
+            if (result.Status == ServiceResultStatus.Forbidden)
+            {
+                TempData["ReviewMessage"] =
+                    result.Message ?? "You cannot vote on this review.";
+
+                return RedirectToAction(
+                    "Details",
+                    "Games",
+                    new { id = gameId });
+            }
+
+            if (!result.Succeeded)
+            {
+                TempData["ReviewMessage"] =
+                    result.Message ?? "Your vote could not be saved.";
+            }
+
+            return RedirectToAction(
+                "Details",
+                "Games",
+                new { id = gameId });
+        }
+
         public async Task<IActionResult> Delete(int id)
         {
             var user = await _userManager.GetUserAsync(User);

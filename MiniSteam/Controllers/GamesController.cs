@@ -140,6 +140,24 @@ namespace MiniSteam.Controllers
                     nameof(model.TrailerUrl),
                     "Trailer must be an http/https URL. YouTube watch, youtu.be, embed, MP4 and WEBM URLs are supported.");
             }
+
+            if (!Enum.IsDefined(typeof(GameReleaseStatus), model.ReleaseStatus))
+            {
+                ModelState.AddModelError(
+                    nameof(model.ReleaseStatus),
+                    "Select a valid release status.");
+            }
+
+            if (model.Price > 0 &&
+                model.DiscountPercent > 0 &&
+                model.DiscountStartDate.HasValue &&
+                model.DiscountEndDate.HasValue &&
+                model.DiscountStartDate.Value.Date > model.DiscountEndDate.Value.Date)
+            {
+                ModelState.AddModelError(
+                    nameof(model.DiscountEndDate),
+                    "Discount end date must be on or after the start date.");
+            }
         }
 
         private static List<string> ParseTags(string? tagsText)
@@ -317,8 +335,12 @@ namespace MiniSteam.Controllers
             int? genreId,
             string? tag,
             string? developer,
-            string? publisher)
+            string? publisher,
+            string? section)
         {
+            var today = DateTime.Today;
+            var newReleaseCutoff = today.AddDays(-90);
+
             var games = _context.Games
                 .Include(game => game.Genre)
                 .Include(game => game.Tags)
@@ -360,15 +382,102 @@ namespace MiniSteam.Controllers
                 games = games.Where(game => game.Publisher == normalizedPublisher);
             }
 
+            var normalizedSection = section?.Trim().ToLowerInvariant();
+
+            if (normalizedSection is not ("featured" or "specials" or "new" or "earlyaccess" or "free" or "comingsoon"))
+            {
+                normalizedSection = null;
+            }
+
+            games = normalizedSection switch
+            {
+                "featured" => games.Where(game => game.IsFeatured),
+                "specials" => games.Where(game =>
+                    game.Price > 0 &&
+                    game.ReleaseStatus != GameReleaseStatus.ComingSoon &&
+                    game.DiscountPercent > 0 &&
+                    (!game.DiscountStartDate.HasValue || game.DiscountStartDate.Value <= today) &&
+                    (!game.DiscountEndDate.HasValue || game.DiscountEndDate.Value >= today)),
+                "new" => games.Where(game =>
+                    game.ReleaseStatus == GameReleaseStatus.Released &&
+                    game.ReleaseDate >= newReleaseCutoff &&
+                    game.ReleaseDate <= today),
+                "earlyaccess" => games.Where(game =>
+                    game.ReleaseStatus == GameReleaseStatus.EarlyAccess),
+                "free" => games.Where(game =>
+                    game.Price == 0 &&
+                    game.ReleaseStatus != GameReleaseStatus.ComingSoon),
+                "comingsoon" => games.Where(game =>
+                    game.ReleaseStatus == GameReleaseStatus.ComingSoon),
+                _ => games
+            };
+
             ViewBag.ActiveTag = tag?.Trim();
             ViewBag.ActiveDeveloper = developer?.Trim();
             ViewBag.ActivePublisher = publisher?.Trim();
 
             LoadGenreList(genreId);
 
-            return View(await games
-                .OrderBy(game => game.Name)
-                .ToListAsync());
+            var discoveryQuery = _context.Games
+                .Include(game => game.Genre)
+                .Include(game => game.Tags)
+                .Where(game => game.IsPublic);
+
+            var model = new StoreViewModel
+            {
+                Games = await games
+                    .OrderBy(game => game.Name)
+                    .ToListAsync(),
+
+                ActiveSection = normalizedSection,
+
+                FeaturedGames = await discoveryQuery
+                    .Where(game => game.IsFeatured)
+                    .OrderByDescending(game => game.ReleaseDate)
+                    .Take(4)
+                    .ToListAsync(),
+
+                SpecialOfferGames = await discoveryQuery
+                    .Where(game =>
+                        game.Price > 0 &&
+                        game.DiscountPercent > 0 &&
+                        (!game.DiscountStartDate.HasValue || game.DiscountStartDate.Value <= today) &&
+                        (!game.DiscountEndDate.HasValue || game.DiscountEndDate.Value >= today))
+                    .OrderByDescending(game => game.DiscountPercent)
+                    .Take(4)
+                    .ToListAsync(),
+
+                NewReleaseGames = await discoveryQuery
+                    .Where(game =>
+                        game.ReleaseStatus == GameReleaseStatus.Released &&
+                        game.ReleaseDate >= newReleaseCutoff &&
+                        game.ReleaseDate <= today)
+                    .OrderByDescending(game => game.ReleaseDate)
+                    .Take(4)
+                    .ToListAsync(),
+
+                EarlyAccessGames = await discoveryQuery
+                    .Where(game => game.ReleaseStatus == GameReleaseStatus.EarlyAccess)
+                    .OrderByDescending(game => game.ReleaseDate)
+                    .Take(4)
+                    .ToListAsync(),
+
+                FreeGames = await discoveryQuery
+                    .Where(game =>
+                        game.Price == 0 &&
+                        game.ReleaseStatus != GameReleaseStatus.ComingSoon)
+                    .OrderBy(game => game.Name)
+                    .Take(4)
+                    .ToListAsync(),
+
+                ComingSoonGames = await discoveryQuery
+                    .Where(game => game.ReleaseStatus == GameReleaseStatus.ComingSoon)
+                    .OrderBy(game => game.ReleaseDate)
+                    .Take(4)
+                    .ToListAsync()
+            };
+
+            return View(model);
         }
 
         [Authorize(Roles = "Admin")]
@@ -410,7 +519,8 @@ namespace MiniSteam.Controllers
 
             return View(new GameViewModel
             {
-                ReleaseDate = DateTime.Today
+                ReleaseDate = DateTime.Today,
+                ReleaseStatus = GameReleaseStatus.Released
             });
         }
 
@@ -459,6 +569,7 @@ namespace MiniSteam.Controllers
 
             var reviews = await _context.Reviews
                 .Include(review => review.User)
+                .Include(review => review.Votes)
                 .Where(review => review.GameId == game.Id)
                 .OrderByDescending(review => review.CreatedAt)
                 .ToListAsync();
@@ -534,7 +645,15 @@ namespace MiniSteam.Controllers
                     Description = model.Description?.Trim(),
                     Price = model.Price,
                     DiscountPercent = model.Price == 0 ? 0 : model.DiscountPercent,
+                    DiscountStartDate = model.Price == 0 || model.DiscountPercent == 0
+                        ? null
+                        : model.DiscountStartDate?.Date,
+                    DiscountEndDate = model.Price == 0 || model.DiscountPercent == 0
+                        ? null
+                        : model.DiscountEndDate?.Date,
                     ReleaseDate = model.ReleaseDate,
+                    ReleaseStatus = model.ReleaseStatus,
+                    IsFeatured = model.IsFeatured,
                     Developer = model.Developer.Trim(),
                     Publisher = model.Publisher?.Trim(),
                     IsPublic = model.IsPublic,
@@ -594,7 +713,11 @@ namespace MiniSteam.Controllers
                 Description = game.Description,
                 Price = game.Price,
                 DiscountPercent = game.DiscountPercent,
+                DiscountStartDate = game.DiscountStartDate,
+                DiscountEndDate = game.DiscountEndDate,
                 ReleaseDate = game.ReleaseDate,
+                ReleaseStatus = game.ReleaseStatus,
+                IsFeatured = game.IsFeatured,
                 Developer = game.Developer,
                 Publisher = game.Publisher,
                 IsPublic = game.IsPublic,
@@ -648,7 +771,15 @@ namespace MiniSteam.Controllers
                 game.Description = model.Description?.Trim();
                 game.Price = model.Price;
                 game.DiscountPercent = model.Price == 0 ? 0 : model.DiscountPercent;
+                game.DiscountStartDate = model.Price == 0 || model.DiscountPercent == 0
+                    ? null
+                    : model.DiscountStartDate?.Date;
+                game.DiscountEndDate = model.Price == 0 || model.DiscountPercent == 0
+                    ? null
+                    : model.DiscountEndDate?.Date;
                 game.ReleaseDate = model.ReleaseDate;
+                game.ReleaseStatus = model.ReleaseStatus;
+                game.IsFeatured = model.IsFeatured;
                 game.Developer = model.Developer.Trim();
                 game.Publisher = model.Publisher?.Trim();
                 game.IsPublic = model.IsPublic;

@@ -21,7 +21,7 @@ public class PurchaseServiceTests
         };
 
         context.Games.Add(game);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         context.CartItems.Add(new CartItem
         {
@@ -33,7 +33,7 @@ public class PurchaseServiceTests
             UserId = "user-1",
             GameId = game.Id
         });
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var service = new PurchaseService(context);
         var result = await service.BuyGameAsync("user-1", game.Id, isAdmin: false);
@@ -41,19 +41,19 @@ public class PurchaseServiceTests
         Assert.True(result.Succeeded);
         Assert.Equal(15m, result.Value!.TotalPrice);
         Assert.Equal(15m, Assert.Single(result.Value.PurchaseItems).Price);
-        Assert.True(await context.LibraryGames.AnyAsync(item =>
+        Assert.True(context.LibraryGames.Any(item =>
             item.UserId == "user-1" && item.GameId == game.Id));
-        Assert.False(await context.CartItems.AnyAsync(item => item.UserId == "user-1"));
-        Assert.False(await context.WishlistItems.AnyAsync(item => item.UserId == "user-1"));
+        Assert.False(context.CartItems.Any(item => item.UserId == "user-1"));
+        Assert.False(context.WishlistItems.Any(item => item.UserId == "user-1"));
 
         game.Price = 100m;
         game.DiscountPercent = 0;
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var storedPurchasePrice = await context.PurchaseItems
+        var storedPurchasePrice = context.PurchaseItems
             .Where(item => item.GameId == game.Id)
             .Select(item => item.Price)
-            .SingleAsync();
+            .Single();
 
         Assert.Equal(15m, storedPurchasePrice);
     }
@@ -82,12 +82,12 @@ public class PurchaseServiceTests
         };
 
         context.Games.AddRange(firstGame, secondGame);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         context.CartItems.AddRange(
             new CartItem { UserId = "user-1", GameId = firstGame.Id },
             new CartItem { UserId = "user-1", GameId = secondGame.Id });
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var service = new PurchaseService(context);
         var result = await service.CheckoutCartAsync("user-1", isAdmin: false);
@@ -95,8 +95,8 @@ public class PurchaseServiceTests
         Assert.True(result.Succeeded);
         Assert.Equal(20m, result.Value!.TotalPrice);
         Assert.Equal(2, result.Value.PurchaseItems.Count);
-        Assert.Equal(2, await context.LibraryGames.CountAsync(item => item.UserId == "user-1"));
-        Assert.False(await context.CartItems.AnyAsync(item => item.UserId == "user-1"));
+        Assert.Equal(2, context.LibraryGames.Count(item => item.UserId == "user-1"));
+        Assert.False(context.CartItems.Any(item => item.UserId == "user-1"));
     }
 
     [Fact]
@@ -113,18 +113,116 @@ public class PurchaseServiceTests
         };
 
         context.Games.Add(game);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         context.LibraryGames.Add(new LibraryGame
         {
             UserId = "user-1",
             GameId = game.Id
         });
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var service = new PurchaseService(context);
         var result = await service.BuyGameAsync("user-1", game.Id, isAdmin: false);
 
         Assert.Equal(ServiceResultStatus.AlreadyOwned, result.Status);
     }
+
+    [Fact]
+    public async Task BuyGameAsync_BlocksComingSoonGame()
+    {
+        await using var context = TestDataContextFactory.Create();
+
+        var game = new Game
+        {
+            Name = "Future Purchase",
+            Developer = "Future Studio",
+            ReleaseDate = DateTime.Today.AddMonths(1),
+            ReleaseStatus = GameReleaseStatus.ComingSoon,
+            IsPublic = true,
+            Price = 39.99m
+        };
+
+        context.Games.Add(game);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var service = new PurchaseService(context);
+        var result = await service.BuyGameAsync(
+            "user-1",
+            game.Id,
+            isAdmin: false);
+
+        Assert.Equal(ServiceResultStatus.InvalidOperation, result.Status);
+        Assert.Empty(context.Purchases);
+        Assert.Empty(context.LibraryGames);
+    }
+
+
+    [Fact]
+    public async Task BuyGameAsync_UsesActiveScheduledDiscount_ForSnapshot()
+    {
+        await using var context = TestDataContextFactory.Create();
+
+        var game = new Game
+        {
+            Name = "Scheduled Sale Game",
+            Developer = "Sale Studio",
+            ReleaseDate = DateTime.Today.AddMonths(-1),
+            ReleaseStatus = GameReleaseStatus.Released,
+            IsPublic = true,
+            Price = 40m,
+            DiscountPercent = 25,
+            DiscountStartDate = DateTime.Today.AddDays(-1),
+            DiscountEndDate = DateTime.Today.AddDays(1)
+        };
+
+        context.Games.Add(game);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var service = new PurchaseService(context);
+        var result = await service.BuyGameAsync(
+            "user-1",
+            game.Id,
+            isAdmin: false);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(30m, result.Value!.TotalPrice);
+        Assert.Equal(30m, Assert.Single(result.Value.PurchaseItems).Price);
+    }
+
+
+    [Fact]
+    public async Task CheckoutCartAsync_BlocksGameThatBecameComingSoon()
+    {
+        await using var context = TestDataContextFactory.Create();
+
+        var game = new Game
+        {
+            Name = "Changed Release Game",
+            Developer = "Future Studio",
+            ReleaseDate = DateTime.Today.AddMonths(2),
+            ReleaseStatus = GameReleaseStatus.ComingSoon,
+            IsPublic = true,
+            Price = 19.99m
+        };
+
+        context.Games.Add(game);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        context.CartItems.Add(new CartItem
+        {
+            UserId = "user-1",
+            GameId = game.Id
+        });
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var service = new PurchaseService(context);
+        var result = await service.CheckoutCartAsync("user-1", isAdmin: false);
+
+        Assert.Equal(ServiceResultStatus.InvalidOperation, result.Status);
+        Assert.Empty(context.Purchases);
+        Assert.Empty(context.LibraryGames);
+        Assert.Single(context.CartItems);
+    }
+
 }

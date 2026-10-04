@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Cart";
     var itemCount = Model.Items.Count;
+    var hasUnavailableItems = Model.Items.Any(item => !item.IsPurchasable);
 }
 
 <div class="cart-page">
@@ -81,6 +82,10 @@
                                 <div class="cart-game-info">
                                     <h3>@item.Name</h3>
                                     <span>@(item.GenreName ?? "Uncategorized")</span>
+                                    @if (!item.IsPurchasable)
+                                    {
+                                        <span class="cart-item-unavailable">@item.ReleaseStatus · remove before checkout</span>
+                                    }
                                 </div>
                             </a>
 
@@ -124,9 +129,19 @@
                     <strong>@Model.TotalPrice.ToString("0.00") €</strong>
                 </div>
 
-                <form asp-controller="Cart" asp-action="Checkout" method="post">
-                    <button type="submit" class="cart-checkout-button">Purchase for myself</button>
-                </form>
+                @if (hasUnavailableItems)
+                {
+                    <div class="cart-unavailable-notice">
+                        Remove Coming Soon items before checkout.
+                    </div>
+                    <button type="button" class="cart-checkout-button" disabled>Checkout unavailable</button>
+                }
+                else
+                {
+                    <form asp-controller="Cart" asp-action="Checkout" method="post">
+                        <button type="submit" class="cart-checkout-button">Purchase for myself</button>
+                    </form>
+                }
 
                 <p class="cart-summary-note">
                     MiniSteam is an educational project. No real payment is processed.

@@ -10162,3 +10162,413 @@ body.media-lightbox-open {
         gap: 2px;
     }
 }
+
+
+/* =========================================================
+   MINISTEAM v2.8 - STORE INTELLIGENCE / REVIEWS
+   ========================================================= */
+
+.store-page-v28 .store-discovery-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin: 0 0 18px;
+}
+
+.store-page-v28 .store-discovery-nav a {
+    padding: 8px 12px;
+    border: 1px solid #29465d;
+    background: linear-gradient(90deg, #172b3c, #1d3a50);
+    color: #9fc8e4;
+    font-size: 11px;
+    text-decoration: none;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.store-page-v28 .store-discovery-nav a:hover {
+    border-color: #66c0f4;
+    background: #244d69;
+    color: #ffffff;
+}
+
+.store-shelf-section {
+    margin-bottom: 22px;
+}
+
+.store-shelf-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.store-shelf-heading span {
+    color: #5f819a;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.store-shelf-heading h2 {
+    margin: 1px 0 0;
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 300;
+}
+
+.store-shelf-heading > a {
+    color: #67c1f5;
+    font-size: 10px;
+    text-decoration: none;
+}
+
+.store-shelf-heading > a:hover {
+    color: #ffffff;
+}
+
+.store-shelf-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.store-discovery-split {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 22px;
+}
+
+.store-mini-shelf {
+    min-width: 0;
+}
+
+.store-mini-shelf .store-shelf-card + .store-shelf-card {
+    margin-top: 7px;
+}
+
+.store-shelf-card {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #213d52;
+    background: linear-gradient(135deg, #172636, #1e3c50);
+    color: inherit;
+    text-decoration: none;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .16);
+    transition: transform .15s ease, border-color .15s ease, filter .15s ease;
+}
+
+.store-shelf-card:hover {
+    border-color: #4a81a5;
+    filter: brightness(1.08);
+    transform: translateY(-2px);
+}
+
+.store-shelf-image {
+    position: relative;
+    height: 120px;
+    overflow: hidden;
+    background: #101c28;
+}
+
+.store-shelf-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.store-shelf-badge {
+    position: absolute;
+    left: 7px;
+    bottom: 7px;
+    padding: 4px 7px;
+    background: rgba(9, 18, 27, .9);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: .7px;
+}
+
+.store-shelf-badge-sale {
+    background: #4c6b22;
+    color: #b9ef6b;
+}
+
+.store-shelf-badge-free {
+    background: #294d2c;
+    color: #a9e66f;
+}
+
+.store-shelf-badge-coming {
+    background: #294862;
+    color: #67c1f5;
+}
+
+.store-shelf-badge-early {
+    background: #76561b;
+    color: #ffd27c;
+}
+
+.store-shelf-info {
+    display: flex;
+    min-height: 92px;
+    padding: 9px 11px 10px;
+    flex-direction: column;
+}
+
+.store-shelf-info > strong {
+    overflow: hidden;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 400;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.store-shelf-info > span {
+    overflow: hidden;
+    margin-top: 3px;
+    color: #7f98aa;
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.store-shelf-price {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: auto;
+    padding-top: 8px;
+    color: #b9d7ea;
+    font-size: 11px;
+}
+
+.store-shelf-price del {
+    color: #677b8a;
+    font-size: 9px;
+}
+
+.store-shelf-price .store-shelf-free {
+    color: #a4d66d;
+}
+
+.store-game-title-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+}
+
+.store-game-title-line h4 {
+    margin: 0;
+}
+
+.store-state-badge {
+    padding: 3px 5px;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: .5px;
+}
+
+.store-state-featured {
+    background: #21445c;
+    color: #67c1f5;
+}
+
+.store-state-coming {
+    background: #294862;
+    color: #82d2ff;
+}
+
+.store-state-early {
+    background: #76561b;
+    color: #ffd27c;
+}
+
+.store-coming-price,
+.wishlist-coming-soon {
+    color: #67c1f5;
+    font-size: 11px;
+}
+
+.game-details-heading-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.game-release-badge {
+    display: inline-flex;
+    padding: 5px 7px;
+    align-items: center;
+    color: #ffffff;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: .7px;
+}
+
+.game-release-coming {
+    background: #294862;
+    color: #82d2ff;
+}
+
+.game-release-early {
+    background: #76561b;
+    color: #ffd27c;
+}
+
+.game-release-featured {
+    background: #21445c;
+    color: #67c1f5;
+}
+
+.game-offer-deadline {
+    display: block;
+    margin-top: 4px;
+    color: #7f98aa;
+    font-size: 9px;
+}
+
+.game-coming-price {
+    color: #67c1f5;
+    font-size: 11px;
+}
+
+.review-helpful-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 11px 0;
+    margin-top: 10px;
+    border-top: 1px solid rgba(42, 71, 94, .7);
+    border-bottom: 1px solid rgba(42, 71, 94, .45);
+}
+
+.review-helpful-row > div:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.review-helpful-label {
+    color: #b8c6d1;
+    font-size: 10px;
+}
+
+.review-helpful-count {
+    color: #607a8f;
+    font-size: 9px;
+}
+
+.review-vote-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.review-vote-actions form {
+    margin: 0;
+}
+
+.review-vote-button {
+    min-width: 58px;
+    padding: 6px 10px;
+    border: 1px solid #2a475e;
+    background: #172838;
+    color: #a7b7c4;
+    font-size: 9px;
+    cursor: pointer;
+}
+
+.review-vote-button:hover,
+.review-vote-button.selected {
+    border-color: #66c0f4;
+    background: #214d68;
+    color: #ffffff;
+}
+
+.admin-dashboard-summary {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.admin-game-status-stack {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+.admin-status-featured {
+    background: #21445c;
+    color: #67c1f5;
+}
+
+.admin-status-coming {
+    background: #294862;
+    color: #82d2ff;
+}
+
+.admin-status-early {
+    background: #76561b;
+    color: #ffd27c;
+}
+
+.wishlist-coming-button {
+    color: #67c1f5 !important;
+}
+
+@media (max-width: 1050px) {
+    .store-shelf-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-dashboard-summary {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .store-discovery-split {
+        grid-template-columns: 1fr;
+    }
+
+    .review-helpful-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 560px) {
+    .store-shelf-grid,
+    .admin-dashboard-summary {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 850px) {
+    .admin-dashboard-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.cart-item-unavailable {
+    color: #d9a441 !important;
+    font-size: 9px;
+}
+
+.cart-unavailable-notice {
+    margin: 10px 0;
+    padding: 8px 10px;
+    border: 1px solid #6a5121;
+    background: rgba(106, 81, 33, .18);
+    color: #e3bd6d;
+    font-size: 10px;
+}
+
+.cart-checkout-button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}

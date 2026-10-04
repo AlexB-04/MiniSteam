@@ -1,4 +1,5 @@
 @model MiniSteam.Models.Entities.Game
+@using MiniSteam.Models.Entities
 
 @{
     ViewData["Title"] = Model.Name;
@@ -14,7 +15,13 @@
         ? 0
         : (int)Math.Round((double)recommendedCount / reviewCount * 100);
 
+    var reviewScoreLabel = MiniSteam.Helpers.ReviewScoreHelper.GetLabel(
+        reviewCount,
+        recommendedPercent);
+
     var isFree = Model.Price == 0;
+    var isComingSoon = Model.ReleaseStatus == GameReleaseStatus.ComingSoon;
+    var isEarlyAccess = Model.ReleaseStatus == GameReleaseStatus.EarlyAccess;
 
     var screenshots = Model.Screenshots
         .OrderBy(screenshot => screenshot.SortOrder)
@@ -98,6 +105,13 @@
         </div>
     }
 
+    @if (TempData["ReviewMessage"] != null)
+    {
+        <div class="game-action-notice">
+            @TempData["ReviewMessage"]
+        </div>
+    }
+
 
     <div class="game-details-navigation">
         @if (ViewBag.From == "games")
@@ -128,13 +142,29 @@
         <div>
             <h1 class="game-details-title">@Model.Name</h1>
 
-            @if (Model.Genre != null)
-            {
-                <a asp-action="Store"
-                   asp-route-genreId="@Model.GenreId"
-                   class="game-details-genre-pill game-details-filter-link"
-                   title="Browse @Model.Genre.Name games">@Model.Genre.Name</a>
-            }
+            <div class="game-details-heading-badges">
+                @if (Model.Genre != null)
+                {
+                    <a asp-action="Store"
+                       asp-route-genreId="@Model.GenreId"
+                       class="game-details-genre-pill game-details-filter-link"
+                       title="Browse @Model.Genre.Name games">@Model.Genre.Name</a>
+                }
+
+                @if (isComingSoon)
+                {
+                    <span class="game-release-badge game-release-coming">COMING SOON</span>
+                }
+                else if (isEarlyAccess)
+                {
+                    <span class="game-release-badge game-release-early">EARLY ACCESS</span>
+                }
+
+                @if (Model.IsFeatured)
+                {
+                    <span class="game-release-badge game-release-featured">FEATURED</span>
+                }
+            </div>
         </div>
 
         @if (ViewBag.IsInLibrary == true)
@@ -248,8 +278,8 @@
 
                     @if (reviewCount > 0)
                     {
-                        <span class="game-details-review-value">@recommendedPercent% Recommended</span>
-                        <span class="game-details-review-count">(@reviewCount)</span>
+                        <span class="game-details-review-value">@reviewScoreLabel</span>
+                        <span class="game-details-review-count">(@reviewCount · @recommendedPercent%)</span>
                     }
                     else
                     {
@@ -259,7 +289,25 @@
 
                 <div class="game-details-property">
                     <span class="game-details-label">Release Date</span>
-                    <span>@Model.ReleaseDate.ToString("dd MMM yyyy")</span>
+                    <span>
+                        @if (isComingSoon)
+                        {
+                            <text>Coming @Model.ReleaseDate.ToString("dd MMM yyyy")</text>
+                        }
+                        else
+                        {
+                            <text>@Model.ReleaseDate.ToString("dd MMM yyyy")</text>
+                        }
+                    </span>
+                </div>
+
+                <div class="game-details-property">
+                    <span class="game-details-label">Status</span>
+                    <span>
+                        @(isComingSoon ? "Coming Soon" :
+                          isEarlyAccess ? "Early Access" :
+                          "Released")
+                    </span>
                 </div>
 
                 <div class="game-details-property">
@@ -324,6 +372,10 @@
                             {
                                 <text>You own this game</text>
                             }
+                            else if (isComingSoon)
+                            {
+                                <text>@Model.Name is coming soon</text>
+                            }
                             else if (isFree)
                             {
                                 <text>Play @Model.Name</text>
@@ -333,17 +385,28 @@
                                 <text>Buy @Model.Name</text>
                             }
                         </span>
+
+                        @if (Model.HasDiscount && Model.DiscountEndDate.HasValue)
+                        {
+                            <small class="game-offer-deadline">
+                                Offer ends @Model.DiscountEndDate.Value.ToString("dd MMM yyyy")
+                            </small>
+                        }
                     </div>
 
                     <div class="game-purchase-price">
-                        @if (isFree)
+                        @if (isComingSoon)
+                        {
+                            <span class="game-coming-price">Available @Model.ReleaseDate.ToString("dd MMM yyyy")</span>
+                        }
+                        else if (isFree)
                         {
                             <span class="game-purchase-free">Free</span>
                         }
                         else if (Model.HasDiscount)
                         {
                             <div class="game-discount-price">
-                                <span class="game-discount-badge">-@Model.DiscountPercent%</span>
+                                <span class="game-discount-badge">-@Model.ActiveDiscountPercent%</span>
                                 <span class="game-original-price">@Model.Price.ToString("0.00") €</span>
                                 <span class="game-final-price">@Model.FinalPrice.ToString("0.00") €</span>
                             </div>
@@ -365,25 +428,28 @@
                         }
                         else
                         {
-                            @if (isFree)
+                            @if (!isComingSoon)
                             {
-                                <form asp-controller="Purchase" asp-action="Buy" asp-route-gameId="@Model.Id" method="post">
-                                    <button type="submit" class="game-buy-button">Get Game</button>
-                                </form>
-                            }
-                            else if (ViewBag.IsInCart == true)
-                            {
-                                <a asp-controller="Cart" asp-action="Index" class="game-buy-button game-cart-view-button">View Cart</a>
-                            }
-                            else
-                            {
-                                <form asp-controller="Cart"
-                                      asp-action="Add"
-                                      asp-route-gameId="@Model.Id"
-                                      asp-route-returnUrl="@Url.Action("Details", "Games", new { id = Model.Id })"
-                                      method="post">
-                                    <button type="submit" class="game-buy-button">Add to Cart</button>
-                                </form>
+                                @if (isFree)
+                                {
+                                    <form asp-controller="Purchase" asp-action="Buy" asp-route-gameId="@Model.Id" method="post">
+                                        <button type="submit" class="game-buy-button">Get Game</button>
+                                    </form>
+                                }
+                                else if (ViewBag.IsInCart == true)
+                                {
+                                    <a asp-controller="Cart" asp-action="Index" class="game-buy-button game-cart-view-button">View Cart</a>
+                                }
+                                else
+                                {
+                                    <form asp-controller="Cart"
+                                          asp-action="Add"
+                                          asp-route-gameId="@Model.Id"
+                                          asp-route-returnUrl="@Url.Action("Details", "Games", new { id = Model.Id })"
+                                          method="post">
+                                        <button type="submit" class="game-buy-button">Add to Cart</button>
+                                    </form>
+                                }
                             }
 
                             @if (ViewBag.IsInWishlist == true)
@@ -393,7 +459,9 @@
                             else
                             {
                                 <form asp-controller="Wishlist" asp-action="AddToWishlist" asp-route-gameId="@Model.Id" method="post">
-                                    <button type="submit" class="game-wishlist-button">Add to Wishlist</button>
+                                    <button type="submit" class="game-wishlist-button">
+                                        Add to Wishlist
+                                    </button>
                                 </form>
                             }
                         }
@@ -404,7 +472,11 @@
                 {
                     <div class="game-purchase-login">
                         <a asp-controller="Account" asp-action="Login">Sign in</a>
-                        <span>to purchase this game or add it to your wishlist.</span>
+                        <span>
+                            @(isComingSoon
+                                ? "to add this game to your wishlist."
+                                : "to purchase this game or add it to your wishlist.")
+                        </span>
                     </div>
                 }
 
@@ -492,8 +564,8 @@
                 }
                 else
                 {
-                    <span class="game-review-summary-title">@recommendedPercent% Recommended</span>
-                    <span class="game-review-summary-description">@recommendedCount of @reviewCount users recommend this game.</span>
+                    <span class="game-review-summary-title">@reviewScoreLabel</span>
+                    <span class="game-review-summary-description">@recommendedPercent% positive · @recommendedCount of @reviewCount users recommend this game.</span>
                 }
 
             </div>
@@ -520,6 +592,13 @@
 
                 @foreach (var review in reviewList)
                 {
+                    var helpfulCount = review.Votes.Count(vote => vote.IsHelpful);
+                    var notHelpfulCount = review.Votes.Count(vote => !vote.IsHelpful);
+                    var currentUserId = ViewBag.CurrentUserId as string;
+                    var currentVote = currentUserId == null
+                        ? null
+                        : review.Votes.FirstOrDefault(vote => vote.UserId == currentUserId);
+
                     <article class="review-card review-card-v2">
 
                         <div class="review-card-side">
@@ -576,6 +655,45 @@
                             </div>
 
                             <p class="review-content">@review.Content</p>
+
+                            <div class="review-helpful-row">
+                                <div>
+                                    <span class="review-helpful-label">Was this review helpful?</span>
+                                    <span class="review-helpful-count">
+                                        @helpfulCount helpful · @notHelpfulCount not helpful
+                                    </span>
+                                </div>
+
+                                @if (User.Identity?.IsAuthenticated == true &&
+                                     currentUserId != review.UserId)
+                                {
+                                    <div class="review-vote-actions">
+                                        <form asp-controller="Review"
+                                              asp-action="Vote"
+                                              asp-route-id="@review.Id"
+                                              asp-route-gameId="@Model.Id"
+                                              asp-route-isHelpful="true"
+                                              method="post">
+                                            <button type="submit"
+                                                    class="review-vote-button @(currentVote?.IsHelpful == true ? "selected" : "")">
+                                                Yes @helpfulCount
+                                            </button>
+                                        </form>
+
+                                        <form asp-controller="Review"
+                                              asp-action="Vote"
+                                              asp-route-id="@review.Id"
+                                              asp-route-gameId="@Model.Id"
+                                              asp-route-isHelpful="false"
+                                              method="post">
+                                            <button type="submit"
+                                                    class="review-vote-button @(currentVote?.IsHelpful == false ? "selected" : "")">
+                                                No @notHelpfulCount
+                                            </button>
+                                        </form>
+                                    </div>
+                                }
+                            </div>
 
                             <div class="review-footer">
 

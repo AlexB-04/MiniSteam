@@ -23,7 +23,17 @@ namespace MiniSteam.Models.Entities
         public int DiscountPercent { get; set; }
 
         [DataType(DataType.Date)]
+        public DateTime? DiscountStartDate { get; set; }
+
+        [DataType(DataType.Date)]
+        public DateTime? DiscountEndDate { get; set; }
+
+        [DataType(DataType.Date)]
         public DateTime ReleaseDate { get; set; }
+
+        public GameReleaseStatus ReleaseStatus { get; set; } = GameReleaseStatus.Released;
+
+        public bool IsFeatured { get; set; }
 
         [Required(ErrorMessage = "Developer is required.")]
         [StringLength(100)]
@@ -54,23 +64,52 @@ namespace MiniSteam.Models.Entities
         public ICollection<GameScreenshot> Screenshots { get; set; } = new List<GameScreenshot>();
 
         [NotMapped]
-        public bool HasDiscount => Price > 0 && DiscountPercent > 0;
+        public bool IsPurchasable => ReleaseStatus != GameReleaseStatus.ComingSoon;
 
         [NotMapped]
-        public decimal FinalPrice
-        {
-            get
-            {
-                if (!HasDiscount)
-                {
-                    return Price;
-                }
+        public bool HasDiscount => HasActiveDiscount(DateTime.Today);
 
-                return Math.Round(
-                    Price * (100 - DiscountPercent) / 100m,
-                    2,
-                    MidpointRounding.AwayFromZero);
+        [NotMapped]
+        public int ActiveDiscountPercent => HasDiscount ? DiscountPercent : 0;
+
+        [NotMapped]
+        public decimal FinalPrice => GetFinalPrice(DateTime.Today);
+
+        public bool HasActiveDiscount(DateTime currentDate)
+        {
+            if (Price <= 0 || DiscountPercent <= 0)
+            {
+                return false;
             }
+
+            var today = currentDate.Date;
+
+            if (DiscountStartDate.HasValue &&
+                today < DiscountStartDate.Value.Date)
+            {
+                return false;
+            }
+
+            if (DiscountEndDate.HasValue &&
+                today > DiscountEndDate.Value.Date)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public decimal GetFinalPrice(DateTime currentDate)
+        {
+            if (!HasActiveDiscount(currentDate))
+            {
+                return Price;
+            }
+
+            return Math.Round(
+                Price * (100 - DiscountPercent) / 100m,
+                2,
+                MidpointRounding.AwayFromZero);
         }
     }
 }

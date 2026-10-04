@@ -29,6 +29,7 @@ namespace MiniSteam.Services
 
             var reviews = await _context.Reviews
                 .Include(review => review.User)
+                .Include(review => review.Votes)
                 .Where(review => review.GameId == gameId)
                 .OrderByDescending(review => review.CreatedAt)
                 .ToListAsync();
@@ -47,6 +48,7 @@ namespace MiniSteam.Services
         public async Task<Review?> GetUserReviewAsync(string userId, int gameId)
         {
             return await _context.Reviews
+                .Include(review => review.Votes)
                 .FirstOrDefaultAsync(review =>
                     review.UserId == userId &&
                     review.GameId == gameId);
@@ -120,6 +122,7 @@ namespace MiniSteam.Services
         {
             var review = await _context.Reviews
                 .Include(review => review.Game)
+                .Include(review => review.Votes)
                 .FirstOrDefaultAsync(review => review.Id == reviewId);
 
             if (review == null)
@@ -172,6 +175,65 @@ namespace MiniSteam.Services
             var review = result.Value;
 
             _context.Reviews.Remove(review);
+            await _context.SaveChangesAsync();
+
+            return ServiceResult<Review>.Success(review);
+        }
+
+        public async Task<ServiceResult<Review>> VoteAsync(
+            string userId,
+            int reviewId,
+            bool isHelpful)
+        {
+            var review = await _context.Reviews
+                .Include(item => item.Votes)
+                .Include(item => item.Game)
+                .FirstOrDefaultAsync(item => item.Id == reviewId);
+
+            if (review == null)
+            {
+                return ServiceResult<Review>.Fail(ServiceResultStatus.NotFound);
+            }
+
+            if (!review.Game.IsPublic)
+            {
+                var canSeeHiddenGame = await _context.LibraryGames
+                    .AnyAsync(libraryGame =>
+                        libraryGame.UserId == userId &&
+                        libraryGame.GameId == review.GameId);
+
+                if (!canSeeHiddenGame)
+                {
+                    return ServiceResult<Review>.Fail(ServiceResultStatus.NotFound);
+                }
+            }
+
+            if (review.UserId == userId)
+            {
+                return ServiceResult<Review>.Fail(
+                    ServiceResultStatus.Forbidden,
+                    "You cannot vote on your own review.");
+            }
+
+            var existingVote = review.Votes
+                .FirstOrDefault(vote => vote.UserId == userId);
+
+            if (existingVote == null)
+            {
+                review.Votes.Add(new ReviewVote
+                {
+                    UserId = userId,
+                    ReviewId = review.Id,
+                    IsHelpful = isHelpful,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                existingVote.IsHelpful = isHelpful;
+                existingVote.CreatedAt = DateTime.UtcNow;
+            }
+
             await _context.SaveChangesAsync();
 
             return ServiceResult<Review>.Success(review);

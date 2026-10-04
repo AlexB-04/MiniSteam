@@ -30,6 +30,8 @@ namespace MiniSteam.Data
 
         public DbSet<GameScreenshot> GameScreenshots { get; set; }
 
+        public DbSet<ReviewVote> ReviewVotes { get; set; }
+
         // Конструктор класса DataContext, который принимает параметры конфигурации DbContextOptions и передает их базовому классу DbContext.
         // Это позволяет настроить контекст базы данных, например, указать строку подключения к базе данных.
         public DataContext(DbContextOptions<DataContext> options) : base(options)
@@ -102,6 +104,22 @@ namespace MiniSteam.Data
 
             modelBuilder.Entity<GameScreenshot>()
                 .HasIndex(screenshot => new { screenshot.GameId, screenshot.SortOrder });
+
+            modelBuilder.Entity<ReviewVote>()
+                .HasIndex(vote => new { vote.ReviewId, vote.UserId })
+                .IsUnique();
+
+            modelBuilder.Entity<ReviewVote>()
+                .HasOne(vote => vote.Review)
+                .WithMany(review => review.Votes)
+                .HasForeignKey(vote => vote.ReviewId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ReviewVote>()
+                .HasOne(vote => vote.User)
+                .WithMany()
+                .HasForeignKey(vote => vote.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
         }
     }

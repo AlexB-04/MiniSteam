@@ -1,4 +1,5 @@
 @model IEnumerable<MiniSteam.Models.Entities.WishlistItem>
+@using MiniSteam.Models.Entities
 
 @{
     ViewData["Title"] = "Wishlist";
@@ -97,7 +98,8 @@
             @foreach (var item in wishlistItems)
             {
                 var isFree = item.Game.Price == 0;
-                var isUpcoming = item.Game.ReleaseDate.Date > DateTime.Today;
+                var isComingSoon = item.Game.ReleaseStatus == GameReleaseStatus.ComingSoon;
+                var isEarlyAccess = item.Game.ReleaseStatus == GameReleaseStatus.EarlyAccess;
                 var isOwned = ownedGameIds.Contains(item.GameId);
                 var isInCart = cartGameIds.Contains(item.GameId);
 
@@ -130,9 +132,13 @@
 
                             <span class="wishlist-developer">@item.Game.Developer</span>
 
-                            @if (isUpcoming)
+                            @if (isComingSoon)
                             {
-                                <span class="wishlist-release-date">Releases @item.Game.ReleaseDate.ToString("dd MMM yyyy")</span>
+                                <span class="wishlist-release-date">Coming @item.Game.ReleaseDate.ToString("dd MMM yyyy")</span>
+                            }
+                            else if (isEarlyAccess)
+                            {
+                                <span class="wishlist-release-date">Early Access · @item.Game.ReleaseDate.ToString("dd MMM yyyy")</span>
                             }
                             else
                             {
@@ -150,14 +156,18 @@
 
                         <div class="wishlist-price">
 
-                            @if (isFree)
+                            @if (isComingSoon)
+                            {
+                                <span class="wishlist-coming-soon">Coming Soon</span>
+                            }
+                            else if (isFree)
                             {
                                 <span class="wishlist-free">Free</span>
                             }
                             else if (item.Game.HasDiscount)
                             {
                                 <div class="wishlist-sale-price">
-                                    <span class="wishlist-discount-badge">-@item.Game.DiscountPercent%</span>
+                                    <span class="wishlist-discount-badge">-@item.Game.ActiveDiscountPercent%</span>
                                     <span class="wishlist-old-price">@item.Game.Price.ToString("0.00") €</span>
                                     <span>@item.Game.FinalPrice.ToString("0.00") €</span>
                                 </div>
@@ -175,6 +185,10 @@
                             @if (isOwned)
                             {
                                 <button type="button" class="wishlist-owned-button" disabled>In Library</button>
+                            }
+                            else if (isComingSoon)
+                            {
+                                <button type="button" class="wishlist-owned-button wishlist-coming-button" disabled>Coming Soon</button>
                             }
                             else if (isFree)
                             {

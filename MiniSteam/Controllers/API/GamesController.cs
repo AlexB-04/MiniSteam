@@ -28,7 +28,8 @@ namespace MiniSteam.Controllers.API
             int? genreId,
             string? tag,
             string? developer,
-            string? publisher)
+            string? publisher,
+            string? section)
         {
             var games = _context.Games
                 .Include(game => game.Genre)
@@ -72,6 +73,31 @@ namespace MiniSteam.Controllers.API
                 games = games.Where(game => game.Publisher == normalizedPublisher);
             }
 
+            var today = DateTime.Today;
+
+            games = section?.Trim().ToLowerInvariant() switch
+            {
+                "featured" => games.Where(game => game.IsFeatured),
+                "specials" => games.Where(game =>
+                    game.Price > 0 &&
+                    game.ReleaseStatus != GameReleaseStatus.ComingSoon &&
+                    game.DiscountPercent > 0 &&
+                    (!game.DiscountStartDate.HasValue || game.DiscountStartDate.Value <= today) &&
+                    (!game.DiscountEndDate.HasValue || game.DiscountEndDate.Value >= today)),
+                "new" => games.Where(game =>
+                    game.ReleaseStatus == GameReleaseStatus.Released &&
+                    game.ReleaseDate >= today.AddDays(-90) &&
+                    game.ReleaseDate <= today),
+                "earlyaccess" => games.Where(game =>
+                    game.ReleaseStatus == GameReleaseStatus.EarlyAccess),
+                "free" => games.Where(game =>
+                    game.Price == 0 &&
+                    game.ReleaseStatus != GameReleaseStatus.ComingSoon),
+                "comingsoon" => games.Where(game =>
+                    game.ReleaseStatus == GameReleaseStatus.ComingSoon),
+                _ => games
+            };
+
             var result = await games
                 .OrderBy(game => game.Name)
                 .ToListAsync();
@@ -112,6 +138,18 @@ namespace MiniSteam.Controllers.API
                 return BadRequest("Trailer must be an http/https URL.");
             }
 
+            var scheduleError = ValidateCommercialState(
+                model.ReleaseStatus,
+                model.Price,
+                model.DiscountPercent,
+                model.DiscountStartDate,
+                model.DiscountEndDate);
+
+            if (scheduleError != null)
+            {
+                return BadRequest(scheduleError);
+            }
+
             if (string.IsNullOrWhiteSpace(model.Name))
             {
                 return BadRequest("The game name is required.");
@@ -149,7 +187,15 @@ namespace MiniSteam.Controllers.API
                 Description = model.Description?.Trim(),
                 Price = model.Price,
                 DiscountPercent = model.Price == 0 ? 0 : model.DiscountPercent,
+                DiscountStartDate = model.Price == 0 || model.DiscountPercent == 0
+                    ? null
+                    : model.DiscountStartDate?.Date,
+                DiscountEndDate = model.Price == 0 || model.DiscountPercent == 0
+                    ? null
+                    : model.DiscountEndDate?.Date,
                 ReleaseDate = model.ReleaseDate,
+                ReleaseStatus = model.ReleaseStatus,
+                IsFeatured = model.IsFeatured,
                 Developer = model.Developer.Trim(),
                 Publisher = model.Publisher?.Trim(),
                 GenreId = model.GenreId,
@@ -194,6 +240,18 @@ namespace MiniSteam.Controllers.API
             if (!string.IsNullOrWhiteSpace(model.TrailerUrl) && !IsValidTrailerUrl(model.TrailerUrl))
             {
                 return BadRequest("Trailer must be an http/https URL.");
+            }
+
+            var scheduleError = ValidateCommercialState(
+                model.ReleaseStatus,
+                model.Price,
+                model.DiscountPercent,
+                model.DiscountStartDate,
+                model.DiscountEndDate);
+
+            if (scheduleError != null)
+            {
+                return BadRequest(scheduleError);
             }
 
             var game = await _context.Games
@@ -243,7 +301,15 @@ namespace MiniSteam.Controllers.API
             game.Description = model.Description?.Trim();
             game.Price = model.Price;
             game.DiscountPercent = model.Price == 0 ? 0 : model.DiscountPercent;
+            game.DiscountStartDate = model.Price == 0 || model.DiscountPercent == 0
+                ? null
+                : model.DiscountStartDate?.Date;
+            game.DiscountEndDate = model.Price == 0 || model.DiscountPercent == 0
+                ? null
+                : model.DiscountEndDate?.Date;
             game.ReleaseDate = model.ReleaseDate;
+            game.ReleaseStatus = model.ReleaseStatus;
+            game.IsFeatured = model.IsFeatured;
             game.Developer = model.Developer.Trim();
             game.Publisher = model.Publisher?.Trim();
             game.GenreId = model.GenreId;
@@ -293,6 +359,30 @@ namespace MiniSteam.Controllers.API
             {
                 message = "Game deleted successfully."
             });
+        }
+
+        private static string? ValidateCommercialState(
+            GameReleaseStatus releaseStatus,
+            decimal price,
+            int discountPercent,
+            DateTime? discountStartDate,
+            DateTime? discountEndDate)
+        {
+            if (!Enum.IsDefined(typeof(GameReleaseStatus), releaseStatus))
+            {
+                return "Select a valid release status.";
+            }
+
+            if (price > 0 &&
+                discountPercent > 0 &&
+                discountStartDate.HasValue &&
+                discountEndDate.HasValue &&
+                discountStartDate.Value.Date > discountEndDate.Value.Date)
+            {
+                return "Discount end date must be on or after the start date.";
+            }
+
+            return null;
         }
 
         private static string? ValidateStoreContent(
@@ -434,8 +524,14 @@ namespace MiniSteam.Controllers.API
                 Description = game.Description,
                 Price = game.Price,
                 DiscountPercent = game.DiscountPercent,
+                ActiveDiscountPercent = game.ActiveDiscountPercent,
+                DiscountStartDate = game.DiscountStartDate,
+                DiscountEndDate = game.DiscountEndDate,
                 FinalPrice = game.FinalPrice,
                 ReleaseDate = game.ReleaseDate,
+                ReleaseStatus = game.ReleaseStatus.ToString(),
+                IsFeatured = game.IsFeatured,
+                IsPurchasable = game.IsPurchasable,
                 Developer = game.Developer,
                 Publisher = game.Publisher,
                 ImageUrl = game.ImageUrl,

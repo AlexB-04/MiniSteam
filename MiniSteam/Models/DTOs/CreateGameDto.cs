@@ -19,7 +19,19 @@ namespace MiniSteam.Models.DTOs
         public int DiscountPercent { get; set; }
 
         [DataType(DataType.Date)]
+        public DateTime? DiscountStartDate { get; set; }
+
+        [DataType(DataType.Date)]
+        public DateTime? DiscountEndDate { get; set; }
+
+        [DataType(DataType.Date)]
         public DateTime ReleaseDate { get; set; }
+
+        [EnumDataType(typeof(MiniSteam.Models.Entities.GameReleaseStatus))]
+        public MiniSteam.Models.Entities.GameReleaseStatus ReleaseStatus { get; set; }
+            = MiniSteam.Models.Entities.GameReleaseStatus.Released;
+
+        public bool IsFeatured { get; set; }
 
         [Required(ErrorMessage = "Developer is required.")]
         [StringLength(100)]

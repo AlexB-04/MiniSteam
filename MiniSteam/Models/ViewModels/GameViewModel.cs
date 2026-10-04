@@ -24,7 +24,23 @@ namespace MiniSteam.Models.ViewModels
         public int DiscountPercent { get; set; }
 
         [DataType(DataType.Date)]
+        [Display(Name = "Discount Start")]
+        public DateTime? DiscountStartDate { get; set; }
+
+        [DataType(DataType.Date)]
+        [Display(Name = "Discount End")]
+        public DateTime? DiscountEndDate { get; set; }
+
+        [DataType(DataType.Date)]
         public DateTime ReleaseDate { get; set; }
+
+        [Display(Name = "Release Status")]
+        [EnumDataType(typeof(MiniSteam.Models.Entities.GameReleaseStatus))]
+        public MiniSteam.Models.Entities.GameReleaseStatus ReleaseStatus { get; set; }
+            = MiniSteam.Models.Entities.GameReleaseStatus.Released;
+
+        [Display(Name = "Featured")]
+        public bool IsFeatured { get; set; }
 
         [Required(ErrorMessage = "Developer is required.")]
         [StringLength(100)]

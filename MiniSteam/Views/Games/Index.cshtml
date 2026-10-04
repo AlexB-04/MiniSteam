@@ -1,4 +1,5 @@
 @model IEnumerable<MiniSteam.Models.Entities.Game>
+@using MiniSteam.Models.Entities
 
 @{
     ViewData["Title"] = "Game Management";
@@ -8,6 +9,8 @@
     var publicGames = games.Count(game => game.IsPublic);
     var hiddenGames = games.Count(game => !game.IsPublic);
     var freeGames = games.Count(game => game.Price == 0);
+    var featuredGames = games.Count(game => game.IsFeatured);
+    var comingSoonGames = games.Count(game => game.ReleaseStatus == GameReleaseStatus.ComingSoon);
 
     var searchString = Context.Request.Query["searchString"].ToString();
     var genreId = Context.Request.Query["genreId"].ToString();
@@ -59,6 +62,18 @@
             <span>HIDDEN</span>
             <strong>@hiddenGames</strong>
             <small>not publicly listed</small>
+        </div>
+
+        <div class="admin-summary-card">
+            <span>FEATURED</span>
+            <strong>@featuredGames</strong>
+            <small>discovery picks</small>
+        </div>
+
+        <div class="admin-summary-card">
+            <span>COMING SOON</span>
+            <strong>@comingSoonGames</strong>
+            <small>not purchasable yet</small>
         </div>
 
         <div class="admin-summary-card">
@@ -172,14 +187,30 @@
                                 <h2>@item.Name</h2>
                             </div>
 
-                            @if (item.IsPublic)
-                            {
-                                <span class="game-public admin-status-badge">PUBLIC</span>
-                            }
-                            else
-                            {
-                                <span class="game-hidden admin-status-badge">HIDDEN</span>
-                            }
+                            <div class="admin-game-status-stack">
+                                @if (item.IsPublic)
+                                {
+                                    <span class="game-public admin-status-badge">PUBLIC</span>
+                                }
+                                else
+                                {
+                                    <span class="game-hidden admin-status-badge">HIDDEN</span>
+                                }
+
+                                @if (item.IsFeatured)
+                                {
+                                    <span class="admin-status-badge admin-status-featured">FEATURED</span>
+                                }
+
+                                @if (item.ReleaseStatus == GameReleaseStatus.ComingSoon)
+                                {
+                                    <span class="admin-status-badge admin-status-coming">COMING SOON</span>
+                                }
+                                else if (item.ReleaseStatus == GameReleaseStatus.EarlyAccess)
+                                {
+                                    <span class="admin-status-badge admin-status-early">EARLY ACCESS</span>
+                                }
+                            </div>
 
                         </div>
 
@@ -198,7 +229,20 @@
 
                             <div>
                                 <span class="admin-meta-label">RELEASE</span>
-                                <strong>@item.ReleaseDate.ToString("dd MMM yyyy")</strong>
+                                <strong>
+                                    @if (item.ReleaseStatus == GameReleaseStatus.ComingSoon)
+                                    {
+                                        <text>Coming @item.ReleaseDate.ToString("dd MMM yyyy")</text>
+                                    }
+                                    else if (item.ReleaseStatus == GameReleaseStatus.EarlyAccess)
+                                    {
+                                        <text>Early Access</text>
+                                    }
+                                    else
+                                    {
+                                        <text>@item.ReleaseDate.ToString("dd MMM yyyy")</text>
+                                    }
+                                </strong>
                             </div>
 
                             <div>
@@ -210,7 +254,7 @@
                                 }
                                 else if (item.HasDiscount)
                                 {
-                                    <strong>@item.FinalPrice.ToString("0.00") € (-@item.DiscountPercent%)</strong>
+                                    <strong>@item.FinalPrice.ToString("0.00") € (-@item.ActiveDiscountPercent%)</strong>
                                 }
                                 else
                                 {

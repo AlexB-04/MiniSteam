@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 
 namespace MiniSteam.Models.Entities
@@ -26,5 +26,7 @@ namespace MiniSteam.Models.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }
+
+        public ICollection<ReviewVote> Votes { get; set; } = new List<ReviewVote>();
     }
 }

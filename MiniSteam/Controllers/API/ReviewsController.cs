@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MiniSteam.Helpers;
 using MiniSteam.Models.DTOs;
 using MiniSteam.Models.Entities;
 using MiniSteam.Services;
@@ -36,6 +37,37 @@ namespace MiniSteam.Controllers.API
                 .ToList();
 
             return Ok(reviews);
+        }
+
+        [HttpGet("game/{gameId}/summary")]
+        public async Task<IActionResult> GetGameReviewSummary(int gameId)
+        {
+            var result = await _reviewService.GetReviewsAsync(
+                gameId,
+                publicOnly: true);
+
+            if (result.Status == ServiceResultStatus.NotFound)
+            {
+                return NotFound();
+            }
+
+            var reviews = result.Value!;
+            var reviewCount = reviews.Count;
+            var recommendedCount = reviews.Count(review => review.IsRecommended);
+            var recommendedPercent = reviewCount == 0
+                ? 0
+                : (int)Math.Round((double)recommendedCount / reviewCount * 100);
+
+            return Ok(new ReviewSummaryDto
+            {
+                GameId = gameId,
+                ReviewCount = reviewCount,
+                RecommendedCount = recommendedCount,
+                RecommendedPercent = recommendedPercent,
+                ScoreLabel = ReviewScoreHelper.GetLabel(
+                    reviewCount,
+                    recommendedPercent)
+            });
         }
 
         [HttpGet("mine/{gameId}")]
@@ -134,6 +166,45 @@ namespace MiniSteam.Controllers.API
             return Ok(ToDto(result.Value));
         }
 
+        [HttpPost("{id}/vote")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> VoteReview(int id, [FromBody] ReviewVoteDto model)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized();
+            }
+
+            if (!model.IsHelpful.HasValue)
+            {
+                return BadRequest("Vote value is required.");
+            }
+
+            var result = await _reviewService.VoteAsync(
+                userId,
+                id,
+                model.IsHelpful.Value);
+
+            if (result.Status == ServiceResultStatus.NotFound)
+            {
+                return NotFound();
+            }
+
+            if (result.Status == ServiceResultStatus.Forbidden)
+            {
+                return Forbid();
+            }
+
+            if (!result.Succeeded || result.Value == null)
+            {
+                return BadRequest(result.Message ?? "Review vote could not be saved.");
+            }
+
+            return Ok(ToDto(result.Value));
+        }
+
         [HttpDelete("{id}")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> DeleteReview(int id)
@@ -174,7 +245,9 @@ namespace MiniSteam.Controllers.API
                 Content = review.Content,
                 IsRecommended = review.IsRecommended,
                 CreatedAt = review.CreatedAt,
-                UpdatedAt = review.UpdatedAt
+                UpdatedAt = review.UpdatedAt,
+                HelpfulCount = review.Votes.Count(vote => vote.IsHelpful),
+                NotHelpfulCount = review.Votes.Count(vote => !vote.IsHelpful)
             };
         }
     }

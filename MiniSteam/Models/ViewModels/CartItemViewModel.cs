@@ -9,5 +9,7 @@ namespace MiniSteam.Models.ViewModels
         public decimal OriginalPrice { get; set; }
         public int DiscountPercent { get; set; }
         public decimal Price { get; set; }
+        public bool IsPurchasable { get; set; }
+        public string ReleaseStatus { get; set; } = string.Empty;
     }
 }

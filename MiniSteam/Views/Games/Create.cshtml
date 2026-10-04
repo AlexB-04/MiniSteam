@@ -1,4 +1,5 @@
 @model MiniSteam.Models.ViewModels.GameViewModel
+@using MiniSteam.Models.Entities
 
 @{
     ViewData["Title"] = "Create Game";
@@ -139,6 +140,34 @@
                         <small>Use 0 for no discount. Free games ignore discounts.</small>
                     </div>
 
+                    <div class="admin-field-grid">
+
+                        <div class="admin-field">
+                            <label asp-for="DiscountStartDate">Discount Start</label>
+                            <input asp-for="DiscountStartDate" class="admin-form-input" />
+                            <span asp-validation-for="DiscountStartDate" class="text-danger"></span>
+                            <small>Optional. Leave empty for an immediate discount.</small>
+                        </div>
+
+                        <div class="admin-field">
+                            <label asp-for="DiscountEndDate">Discount End</label>
+                            <input asp-for="DiscountEndDate" class="admin-form-input" />
+                            <span asp-validation-for="DiscountEndDate" class="text-danger"></span>
+                            <small>Optional. Leave empty for no automatic end date.</small>
+                        </div>
+
+                    </div>
+
+                    <div class="admin-field">
+                        <label asp-for="ReleaseStatus">Release Status</label>
+                        <select asp-for="ReleaseStatus"
+                                class="admin-form-input admin-form-select"
+                                asp-items="Html.GetEnumSelectList<GameReleaseStatus>()">
+                        </select>
+                        <span asp-validation-for="ReleaseStatus" class="text-danger"></span>
+                        <small>Coming Soon games can be wishlisted but cannot be purchased yet.</small>
+                    </div>
+
                 </section>
 
 
@@ -242,6 +271,21 @@
                             <span>IMAGE</span>
                             <p>JPG, JPEG, PNG or WEBP. Maximum size 5 MB.</p>
                         </div>
+
+                    </div>
+
+
+                    <div class="admin-publish-option">
+
+                        <div>
+                            <strong>Featured Game</strong>
+                            <span>Allow this game to appear in the Featured discovery shelf.</span>
+                        </div>
+
+                        <label class="admin-switch">
+                            <input asp-for="IsFeatured" />
+                            <span class="admin-switch-slider"></span>
+                        </label>
 
                     </div>
 

@@ -9,6 +9,8 @@ namespace MiniSteam.Models.DTOs
         public int DiscountPercent { get; set; }
         public decimal Price { get; set; }
         public DateTime ReleaseDate { get; set; }
+        public string ReleaseStatus { get; set; } = string.Empty;
+        public bool IsFeatured { get; set; }
         public string Developer { get; set; } = string.Empty;
         public string? Publisher { get; set; }
         public string? ImageUrl { get; set; }

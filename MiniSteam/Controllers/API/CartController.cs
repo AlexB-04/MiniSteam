@@ -134,11 +134,13 @@ namespace MiniSteam.Controllers.API
                 GameId = cartItem.GameId,
                 Name = cartItem.Game.Name,
                 OriginalPrice = cartItem.Game.Price,
-                DiscountPercent = cartItem.Game.DiscountPercent,
+                DiscountPercent = cartItem.Game.ActiveDiscountPercent,
                 Price = cartItem.Game.FinalPrice,
                 ImageUrl = cartItem.Game.ImageUrl,
                 GenreName = cartItem.Game.Genre?.Name,
-                AddedAt = cartItem.AddedAt
+                AddedAt = cartItem.AddedAt,
+                IsPurchasable = cartItem.Game.IsPurchasable,
+                ReleaseStatus = cartItem.Game.ReleaseStatus.ToString()
             };
         }
 

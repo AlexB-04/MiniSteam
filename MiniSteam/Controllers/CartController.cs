@@ -43,8 +43,10 @@ namespace MiniSteam.Controllers
                     ImageUrl = cartItem.Game.ImageUrl,
                     GenreName = cartItem.Game.Genre?.Name,
                     OriginalPrice = cartItem.Game.Price,
-                    DiscountPercent = cartItem.Game.DiscountPercent,
-                    Price = cartItem.Game.FinalPrice
+                    DiscountPercent = cartItem.Game.ActiveDiscountPercent,
+                    Price = cartItem.Game.FinalPrice,
+                    IsPurchasable = cartItem.Game.IsPurchasable,
+                    ReleaseStatus = cartItem.Game.ReleaseStatus.ToString()
                 })
                 .ToList();
 
@@ -79,7 +81,8 @@ namespace MiniSteam.Controllers
             }
 
             if (result.Status == ServiceResultStatus.AlreadyOwned ||
-                result.Status == ServiceResultStatus.Conflict)
+                result.Status == ServiceResultStatus.Conflict ||
+                result.Status == ServiceResultStatus.InvalidOperation)
             {
                 TempData["CartMessage"] = result.Message ?? "Unable to add this game to the cart.";
                 return RedirectAfterAdd(returnUrl);
@@ -147,7 +150,10 @@ namespace MiniSteam.Controllers
 
             if (!result.Succeeded)
             {
-                return BadRequest(result.Message ?? "Checkout could not be completed.");
+                TempData["CartMessage"] =
+                    result.Message ?? "Checkout could not be completed.";
+
+                return RedirectToAction(nameof(Index));
             }
 
             return RedirectToAction("Index", "Library");

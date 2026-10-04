@@ -20,5 +20,9 @@ namespace MiniSteam.Services
             string content,
             bool isRecommended);
         Task<ServiceResult<Review>> DeleteAsync(string userId, int reviewId);
+        Task<ServiceResult<Review>> VoteAsync(
+            string userId,
+            int reviewId,
+            bool isHelpful);
     }
 }

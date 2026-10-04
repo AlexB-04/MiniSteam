@@ -10,5 +10,7 @@ namespace MiniSteam.Models.DTOs
         public string? ImageUrl { get; set; }
         public string? GenreName { get; set; }
         public DateTime AddedAt { get; set; }
+        public bool IsPurchasable { get; set; }
+        public string ReleaseStatus { get; set; } = string.Empty;
     }
 }

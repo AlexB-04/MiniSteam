@@ -26,4 +26,4 @@ jobs:
         run: dotnet build MiniSteam.slnx --configuration Release --no-restore
 
       - name: Test backend
-        run: dotnet test MiniSteam.Tests/MiniSteam.Tests.csproj --configuration Release --no-build --verbosity normal
+        run: dotnet test --project MiniSteam.Tests/MiniSteam.Tests.csproj --configuration Release --no-build --verbosity normal

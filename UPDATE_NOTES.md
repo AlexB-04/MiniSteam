@@ -137,3 +137,20 @@ Authoritative build/run validation must be completed in Visual Studio because th
 - added WISHLIST and CART top navigation
 - kept desktop/backend boundary HTTP-only; no backend project reference added
 - no EF Core model changes and no migration required
+
+
+---
+
+# v3.2 Launcher Foundation
+
+- added `GameBuild` entity and authenticated build API
+- added Admin build ZIP publishing and replacement/removal
+- build files are stored privately under `App_Data/GameBuilds`
+- added ZIP signature/path/executable validation
+- added owner/admin protected build download endpoint
+- added desktop streaming downloads with progress
+- added safe staging extraction and traversal protection
+- added local install manifest
+- added Library `INSTALL`, `PLAY`, `UNINSTALL`, and replacement `UPDATE` states
+- added three HTTP integration tests (expected total: 42)
+- v3.2 requires an EF Core migration: `AddGameBuildLauncherV32`

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using MiniSteam.Data;
 using MiniSteam.Models.Entities;
 using MiniSteam.Models.ViewModels;
+using MiniSteam.Services;
 
 namespace MiniSteam.Controllers
 {
@@ -14,6 +15,7 @@ namespace MiniSteam.Controllers
         private readonly DataContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly UserManager<User> _userManager;
+        private readonly IGameBuildStorageService _gameBuildStorage;
         private readonly ILogger<GamesController> _logger;
 
         private static readonly string[] AllowedImageExtensions =
@@ -39,11 +41,13 @@ namespace MiniSteam.Controllers
             DataContext context,
             IWebHostEnvironment webHostEnvironment,
             UserManager<User> userManager,
+            IGameBuildStorageService gameBuildStorage,
             ILogger<GamesController> logger)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
             _userManager = userManager;
+            _gameBuildStorage = gameBuildStorage;
             _logger = logger;
         }
 
@@ -327,6 +331,7 @@ namespace MiniSteam.Controllers
 
             var games = await _context.Games
                 .Include(game => game.Genre)
+                .Include(game => game.Build)
                 .OrderBy(game => game.Name)
                 .ToListAsync();
 
@@ -489,6 +494,7 @@ namespace MiniSteam.Controllers
             var games = _context.Games
                 .Include(game => game.Genre)
                 .Include(game => game.Tags)
+                .Include(game => game.Build)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(searchString))
@@ -863,7 +869,9 @@ namespace MiniSteam.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var game = await _context.Games.FindAsync(id);
+            var game = await _context.Games
+                .Include(item => item.Build)
+                .FirstOrDefaultAsync(item => item.Id == id);
 
             if (game == null)
             {
@@ -871,6 +879,7 @@ namespace MiniSteam.Controllers
             }
 
             var imageUrl = game.ImageUrl;
+            var buildArchiveFileName = game.Build?.ArchiveFileName;
             _context.Games.Remove(game);
 
             try
@@ -886,6 +895,7 @@ namespace MiniSteam.Controllers
             }
 
             DeleteLocalGameImage(imageUrl);
+            _gameBuildStorage.DeleteArchive(buildArchiveFileName);
 
             _logger.LogInformation(
                 "MVC admin deleted game {GameId}: {GameName}",

@@ -23,3 +23,6 @@ Thumbs.db
 *.zip
 
 .env
+
+# Local game build archives (published by Admin, not source-controlled)
+MiniSteam/App_Data/GameBuilds/

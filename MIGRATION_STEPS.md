@@ -43,3 +43,45 @@ Update-Database
 ```
 
 Then run all tests.
+
+
+---
+
+# MiniSteam v3.2 migration
+
+v3.2 adds launcher build metadata.
+
+After a clean solution build:
+
+```powershell
+Add-Migration AddGameBuildLauncherV32
+```
+
+Expected new table only:
+
+```text
+GameBuilds
+├── Id
+├── GameId
+├── Version
+├── ArchiveFileName
+├── ExecutablePath
+├── FileSizeBytes
+└── UpdatedAt
+```
+
+Expected constraints:
+
+```text
+UNIQUE GameId
+FK GameId → Games.Id
+ON DELETE CASCADE
+```
+
+Do not apply a migration that unexpectedly drops/recreates unrelated v2 tables.
+
+If clean:
+
+```powershell
+Update-Database
+```

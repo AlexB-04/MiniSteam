@@ -272,6 +272,7 @@
 
                         <a asp-action="Details" asp-route-id="@item.Id" asp-route-from="games" class="admin-details-button">View</a>
                         <a asp-action="Edit" asp-route-id="@item.Id" class="admin-edit-button">Edit</a>
+                        <a asp-controller="GameBuilds" asp-action="Manage" asp-route-gameId="@item.Id" class="admin-edit-button">@(item.Build == null ? "Build" : $"Build {item.Build.Version}")</a>
                         <a asp-action="Delete" asp-route-id="@item.Id" class="admin-delete-button">Delete</a>
 
                     </div>

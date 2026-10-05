@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -118,6 +119,63 @@ public sealed class ApiClient
         }
     }
 
+    public async Task DownloadFileAsync(
+        string relativeUrl,
+        string destinationPath,
+        IProgress<DownloadProgress>? progress = null,
+        bool authenticated = false,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await SendAsync(
+            () => new HttpRequestMessage(HttpMethod.Get, relativeUrl),
+            authenticated,
+            cancellationToken,
+            HttpCompletionOption.ResponseHeadersRead);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await CreateApiExceptionAsync(response, cancellationToken);
+        }
+
+        var totalBytes = response.Content.Headers.ContentLength;
+        var destinationDirectory = Path.GetDirectoryName(destinationPath);
+
+        if (!string.IsNullOrWhiteSpace(destinationDirectory))
+        {
+            Directory.CreateDirectory(destinationDirectory);
+        }
+
+        await using var input = await response.Content.ReadAsStreamAsync(cancellationToken);
+        await using var output = new FileStream(
+            destinationPath,
+            FileMode.Create,
+            FileAccess.Write,
+            FileShare.None,
+            81920,
+            useAsync: true);
+
+        var buffer = new byte[81920];
+        long totalRead = 0;
+
+        while (true)
+        {
+            var read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
+            if (read == 0)
+            {
+                break;
+            }
+
+            await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+            totalRead += read;
+
+            progress?.Report(new DownloadProgress
+            {
+                BytesReceived = totalRead,
+                TotalBytes = totalBytes
+            });
+        }
+    }
+
     public string? ResolveAssetUrl(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -151,7 +209,8 @@ public sealed class ApiClient
     private async Task<HttpResponseMessage> SendAsync(
         Func<HttpRequestMessage> requestFactory,
         bool authenticated,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead)
     {
         try
         {
@@ -163,7 +222,7 @@ public sealed class ApiClient
             using var firstRequest = requestFactory();
             AddAuthorization(firstRequest, authenticated);
 
-            var response = await _httpClient.SendAsync(firstRequest, cancellationToken);
+            var response = await _httpClient.SendAsync(firstRequest, completionOption, cancellationToken);
 
             if (response.StatusCode != HttpStatusCode.Unauthorized || !authenticated)
             {
@@ -179,7 +238,7 @@ public sealed class ApiClient
 
             using var retryRequest = requestFactory();
             AddAuthorization(retryRequest, authenticated: true);
-            return await _httpClient.SendAsync(retryRequest, cancellationToken);
+            return await _httpClient.SendAsync(retryRequest, completionOption, cancellationToken);
         }
         catch (ApiException)
         {

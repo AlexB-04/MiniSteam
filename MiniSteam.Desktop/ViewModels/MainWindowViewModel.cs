@@ -18,7 +18,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         _services = services;
 
         _storeViewModel = new StoreViewModel(services.GamesService, OpenGameFromStoreAsync);
-        _libraryViewModel = new LibraryViewModel(services.LibraryService, OpenGameFromLibraryAsync);
+        _libraryViewModel = new LibraryViewModel(services.LibraryService, services.InstallationService, OpenGameFromLibraryAsync);
         _wishlistViewModel = new WishlistViewModel(services.WishlistService, services.CartService, OpenGameFromWishlistAsync);
         _cartViewModel = new CartViewModel(services.CartService, OpenGameFromCartAsync);
         _currentViewModel = _storeViewModel;

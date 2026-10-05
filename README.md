@@ -1,4 +1,4 @@
-# MiniSteam v3 — Desktop Client Foundation
+# MiniSteam v3 — Desktop Client / Launcher Prototype
 
 MiniSteam is an educational digital game store/platform prototype. The completed v2 line provides the ASP.NET Core web storefront and backend API; v3 adds a real Windows desktop client on top of that API.
 
@@ -26,7 +26,7 @@ The v2.9 backend includes:
 - ProblemDetails errors
 - correlation IDs and structured logging
 - health checks
-- 39 automated tests
+- 39-test v2.9 backend baseline; 42 total tests after v3.2 launcher integration coverage
 - Docker and CI baseline
 
 ## v3.0 desktop foundation
@@ -84,3 +84,34 @@ The next desktop increment consumes more of the API that already exists in the c
 No database migration is required for this desktop-only increment.
 
 See `V3_1_INSTALL.md` and `V3_1_TEST_CHECKLIST.md` before committing the patch.
+
+
+---
+
+## v3.2 launcher foundation
+
+v3.2 crosses the next major boundary: MiniSteam Desktop can now install and launch a published Windows game build.
+
+```text
+Owned game
+→ GameBuild metadata
+→ authenticated ZIP download
+→ safe extraction
+→ local install manifest
+→ PLAY
+```
+
+Highlights:
+
+- one current `GameBuild` per game
+- Admin build ZIP publishing
+- build archives stored outside `wwwroot`
+- JWT + ownership-checked metadata/download endpoints
+- streaming download progress
+- ZIP traversal protection on server and client
+- configurable install root
+- local installed-game manifest
+- `INSTALL`, `PLAY`, `UNINSTALL`
+- simple full-replacement `UPDATE` when the published version changes
+
+v3.2 requires a new EF Core migration. See `V3_2_INSTALL.md`, `V3_2_TEST_CHECKLIST.md`, and `LAUNCHER_BUILD_GUIDE.md`.

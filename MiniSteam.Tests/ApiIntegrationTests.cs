@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,6 +8,7 @@ using MiniSteam.Models.Entities;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.IO.Compression;
 
 namespace MiniSteam.Tests;
 
@@ -343,4 +345,195 @@ public class ApiIntegrationTests : IClassFixture<TestWebApplicationFactory>
 
         Assert.Equal(HttpStatusCode.Unauthorized, replacementResponse.StatusCode);
     }
+    [Fact]
+    public async Task GameBuild_WithoutJwt_ReturnsUnauthorized()
+    {
+        using var client = CreateClient();
+        using var response = await client.GetAsync(
+            "/api/games/1/build",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GameBuild_NonOwner_ReturnsNotFound()
+    {
+        using var client = CreateClient();
+
+        var email = $"build-nonowner-{Guid.NewGuid():N}@test.local";
+        var password = "Strong123!";
+
+        using var registerResponse = await client.PostAsJsonAsync(
+            "/api/auth/register",
+            new RegisterDto
+            {
+                Email = email,
+                Password = password,
+                ConfirmPassword = password
+            },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Created, registerResponse.StatusCode);
+
+        var tokens = await registerResponse.Content.ReadFromJsonAsync<TokenResponseDto>(
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(tokens);
+
+        int gameId;
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+
+            var game = new Game
+            {
+                Name = $"Non-owned Build Game {Guid.NewGuid():N}",
+                Developer = "Integration Studio",
+                ReleaseDate = DateTime.Today,
+                IsPublic = true,
+                Price = 1m
+            };
+
+            context.Games.Add(game);
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+            gameId = game.Id;
+        }
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", tokens!.Token);
+
+        using var response = await client.GetAsync(
+            $"/api/games/{gameId}/build",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GameBuild_Owner_CanReadMetadataAndDownloadArchive()
+    {
+        using var client = CreateClient();
+
+        var email = $"build-owner-{Guid.NewGuid():N}@test.local";
+        var password = "Strong123!";
+
+        using var registerResponse = await client.PostAsJsonAsync(
+            "/api/auth/register",
+            new RegisterDto
+            {
+                Email = email,
+                Password = password,
+                ConfirmPassword = password
+            },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Created, registerResponse.StatusCode);
+
+        var tokens = await registerResponse.Content.ReadFromJsonAsync<TokenResponseDto>(
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(tokens);
+
+        string? archivePath = null;
+        int gameId;
+
+        try
+        {
+            await using (var scope = _factory.Services.CreateAsyncScope())
+            {
+                var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+                var environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+
+                var user = await userManager.FindByEmailAsync(email);
+                Assert.NotNull(user);
+
+                var game = new Game
+                {
+                    Name = $"Owned Build Game {Guid.NewGuid():N}",
+                    Developer = "Integration Studio",
+                    ReleaseDate = DateTime.Today,
+                    IsPublic = true,
+                    Price = 1m
+                };
+
+                context.Games.Add(game);
+                await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+                gameId = game.Id;
+
+                var buildDirectory = Path.Combine(
+                    environment.ContentRootPath,
+                    "App_Data",
+                    "GameBuilds");
+
+                Directory.CreateDirectory(buildDirectory);
+
+                var archiveFileName = $"test-{Guid.NewGuid():N}.zip";
+                archivePath = Path.Combine(buildDirectory, archiveFileName);
+
+                using (var archive = ZipFile.Open(archivePath, ZipArchiveMode.Create))
+                {
+                    var executable = archive.CreateEntry("TestGame.exe");
+                    await using var stream = executable.Open();
+                    await stream.WriteAsync(
+                        new byte[] { 0x4D, 0x5A, 0x00, 0x00 },
+                        TestContext.Current.CancellationToken);
+                }
+
+                context.LibraryGames.Add(new LibraryGame
+                {
+                    UserId = user!.Id,
+                    GameId = game.Id
+                });
+
+                context.GameBuilds.Add(new GameBuild
+                {
+                    GameId = game.Id,
+                    Version = "1.0.0",
+                    ArchiveFileName = archiveFileName,
+                    ExecutablePath = "TestGame.exe",
+                    FileSizeBytes = new FileInfo(archivePath).Length,
+                    UpdatedAt = DateTime.UtcNow
+                });
+
+                await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", tokens!.Token);
+
+            using var metadataResponse = await client.GetAsync(
+                $"/api/games/{gameId}/build",
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(HttpStatusCode.OK, metadataResponse.StatusCode);
+
+            var build = await metadataResponse.Content.ReadFromJsonAsync<GameBuildDto>(
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            Assert.NotNull(build);
+            Assert.Equal(gameId, build!.GameId);
+            Assert.Equal("1.0.0", build.Version);
+            Assert.Equal("TestGame.exe", build.ExecutablePath);
+
+            using var downloadResponse = await client.GetAsync(
+                $"/api/games/{gameId}/build/download",
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(HttpStatusCode.OK, downloadResponse.StatusCode);
+            Assert.Equal("application/zip", downloadResponse.Content.Headers.ContentType?.MediaType);
+            Assert.True((await downloadResponse.Content.ReadAsByteArrayAsync(
+                TestContext.Current.CancellationToken)).Length > 0);
+        }
+        finally
+        {
+            if (!string.IsNullOrWhiteSpace(archivePath) && File.Exists(archivePath))
+            {
+                File.Delete(archivePath);
+            }
+        }
+    }
+
 }

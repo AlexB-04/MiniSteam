@@ -14,6 +14,7 @@ public sealed class ServiceRegistry
         WishlistService = new WishlistService(ApiClient);
         CartService = new CartService(ApiClient);
         ReviewsService = new ReviewsService(ApiClient);
+        InstallationService = new InstallationService(ApiClient, settings);
     }
 
     public SessionService Session { get; }
@@ -24,4 +25,5 @@ public sealed class ServiceRegistry
     public WishlistService WishlistService { get; }
     public CartService CartService { get; }
     public ReviewsService ReviewsService { get; }
+    public InstallationService InstallationService { get; }
 }

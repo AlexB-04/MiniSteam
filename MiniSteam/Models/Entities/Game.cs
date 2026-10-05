@@ -63,6 +63,8 @@ namespace MiniSteam.Models.Entities
 
         public ICollection<GameScreenshot> Screenshots { get; set; } = new List<GameScreenshot>();
 
+        public GameBuild? Build { get; set; }
+
         [NotMapped]
         public bool IsPurchasable => ReleaseStatus != GameReleaseStatus.ComingSoon;
 

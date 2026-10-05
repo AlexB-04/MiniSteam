@@ -1,4 +1,4 @@
-# MiniSteam v2.9 test plan
+# MiniSteam v3.2 test plan
 
 ## Automated
 
@@ -11,7 +11,7 @@ Test → Test Explorer → Run All
 Expected patch total:
 
 ```text
-39 Passed
+42 Passed
 0 Failed
 0 Skipped
 ```
@@ -127,3 +127,28 @@ GET /api/games/2147483647
 ```
 
 Expected `404 application/problem+json` including `traceId`.
+
+
+## v3.2 launcher API checks
+
+New automated/manual focus:
+
+```text
+GET /api/games/{id}/build
+GET /api/games/{id}/build/download
+```
+
+Expected access rules:
+
+```text
+anonymous → 401
+non-owner → 404
+owner → 200
+Admin → 200 (management/testing)
+```
+
+Desktop manual flow:
+
+```text
+Library → INSTALL → progress → PLAY → UNINSTALL
+```

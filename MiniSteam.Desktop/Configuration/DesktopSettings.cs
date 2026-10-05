@@ -6,6 +6,7 @@ namespace MiniSteam.Desktop.Configuration;
 public sealed class DesktopSettings
 {
     public ApiSettings Api { get; set; } = new();
+    public LauncherSettings Launcher { get; set; } = new();
 
     public static DesktopSettings Load()
     {
@@ -37,6 +38,25 @@ public sealed class DesktopSettings
             settings.Api.BaseUrl += "/";
         }
 
+        if (string.IsNullOrWhiteSpace(settings.Launcher.InstallRoot))
+        {
+            settings.Launcher.InstallRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "Games",
+                "MiniSteam");
+        }
+        else
+        {
+            settings.Launcher.InstallRoot = Environment.ExpandEnvironmentVariables(settings.Launcher.InstallRoot.Trim());
+        }
+
+        settings.Launcher.ManifestPath = string.IsNullOrWhiteSpace(settings.Launcher.ManifestPath)
+            ? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "MiniSteam",
+                "installed-games.json")
+            : Environment.ExpandEnvironmentVariables(settings.Launcher.ManifestPath.Trim());
+
         return settings;
     }
 }
@@ -44,4 +64,11 @@ public sealed class DesktopSettings
 public sealed class ApiSettings
 {
     public string BaseUrl { get; set; } = "https://localhost:7161/";
+}
+
+
+public sealed class LauncherSettings
+{
+    public string InstallRoot { get; set; } = string.Empty;
+    public string ManifestPath { get; set; } = string.Empty;
 }

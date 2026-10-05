@@ -34,6 +34,8 @@ namespace MiniSteam.Data
 
         public DbSet<RefreshToken> RefreshTokens { get; set; }
 
+        public DbSet<GameBuild> GameBuilds { get; set; }
+
         // Конструктор класса DataContext, который принимает параметры конфигурации DbContextOptions и передает их базовому классу DbContext.
         // Это позволяет настроить контекст базы данных, например, указать строку подключения к базе данных.
         public DataContext(DbContextOptions<DataContext> options) : base(options)
@@ -134,6 +136,16 @@ namespace MiniSteam.Data
                 .HasOne(token => token.User)
                 .WithMany()
                 .HasForeignKey(token => token.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<GameBuild>()
+                .HasIndex(build => build.GameId)
+                .IsUnique();
+
+            modelBuilder.Entity<GameBuild>()
+                .HasOne(build => build.Game)
+                .WithOne(game => game.Build)
+                .HasForeignKey<GameBuild>(build => build.GameId)
                 .OnDelete(DeleteBehavior.Cascade);
 
         }

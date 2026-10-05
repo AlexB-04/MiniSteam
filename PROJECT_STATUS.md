@@ -19,7 +19,7 @@ Timed discounts               ✅
 Release states                ✅
 Store discovery               ✅
 Security hardening            ✅
-39 / 39 automated tests       ✅
+39 / 39 v2.9 automated tests  ✅
 ProblemDetails                ✅
 Correlation IDs / logging     ✅
 Health checks                 ✅
@@ -47,7 +47,7 @@ Logout back to Login          ✅
 
 The first real desktop client is working against the v2.9 backend rather than referencing backend code directly.
 
-## v3.1 desktop commerce & reviews — PATCH PREPARED
+## v3.1 desktop commerce & reviews — VALIDATED
 
 This patch extends the already validated desktop foundation with the next user-facing API features:
 
@@ -67,20 +67,35 @@ Helpful / not helpful voting  ✅ implemented in patch
 
 No database migration is required for v3.1 because the patch consumes API/database features that already exist in v2.9.
 
-## Next major stage after v3.1
+## v3.2 launcher foundation — PATCH PREPARED
 
 ```text
-v3.2 Desktop media/UX polish
-↓
-v3.3 GameBuild
-↓
-Download
-↓
-Install
-↓
-PLAY
-↓
-Updates
+GameBuild model/API            ✅ implemented in patch
+Admin ZIP publishing           ✅ implemented in patch
+Ownership-checked download     ✅ implemented in patch
+Desktop download progress      ✅ implemented in patch
+Safe ZIP extraction            ✅ implemented in patch
+Local install manifest         ✅ implemented in patch
+INSTALL                        ✅ implemented in patch
+PLAY                           ✅ implemented in patch
+UNINSTALL                      ✅ implemented in patch
+Full replacement UPDATE        ✅ implemented in patch
+42-test expected suite         ✅ 3 launcher integration tests added
 ```
 
-`Download → Install → PLAY` is the major boundary where MiniSteam becomes a launcher/platform prototype rather than only a storefront client.
+A database migration is required for the new `GameBuilds` table.
+
+## Next major stage after v3.2
+
+```text
+v3.3 launcher reliability
+├── verify / repair files
+├── download queue
+├── pause / resume research
+├── stronger update model
+└── playtime / process tracking
+
+v3.4 desktop/media polish
+```
+
+`Download → Install → PLAY` is no longer only a roadmap item in v3.2; it is the core feature being introduced by this patch.

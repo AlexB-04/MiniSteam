@@ -1,0 +1,156 @@
+@model MiniSteam.Models.ViewModels.GameBuildViewModel
+
+@{
+    ViewData["Title"] = $"Build - {Model.GameName}";
+
+    string FormatBytes(long? bytes)
+    {
+        if (!bytes.HasValue || bytes.Value <= 0)
+        {
+            return "Unknown size";
+        }
+
+        var value = (double)bytes.Value;
+        string[] units = { "B", "KB", "MB", "GB" };
+        var unit = 0;
+
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return $"{value:0.##} {units[unit]}";
+    }
+}
+
+<div class="admin-games-page admin-games-v2">
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="admin-message">
+            <span class="admin-message-icon">✓</span>
+            <span>@TempData["SuccessMessage"]</span>
+        </div>
+    }
+
+    <div class="admin-page-heading">
+        <div>
+            <span class="admin-page-eyebrow">MINISTEAM LAUNCHER ADMIN</span>
+            <h1>@Model.GameName</h1>
+            <p>Publish the Windows build used by MiniSteam Desktop for Install and Play.</p>
+        </div>
+
+        <a asp-controller="Games" asp-action="Index" class="admin-create-game-button">
+            ← Games
+        </a>
+    </div>
+
+    <form asp-action="Manage" method="post" enctype="multipart/form-data" class="admin-form-shell">
+        <input asp-for="GameId" type="hidden" />
+
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="admin-form-main">
+            <section class="admin-form-section">
+                <div class="admin-form-section-heading">
+                    <span class="admin-form-section-number">01</span>
+                    <div>
+                        <h2>Published Build</h2>
+                        <p>The client downloads this ZIP, installs it safely and launches the configured executable.</p>
+                    </div>
+                </div>
+
+                <div class="admin-field-grid">
+                    <div class="admin-field">
+                        <label asp-for="Version"></label>
+                        <input asp-for="Version" class="admin-form-input" placeholder="1.0.0" />
+                        <span asp-validation-for="Version" class="text-danger"></span>
+                        <small>This is compared with the locally installed version.</small>
+                    </div>
+
+                    <div class="admin-field">
+                        <label asp-for="ExecutablePath"></label>
+                        <input asp-for="ExecutablePath" class="admin-form-input" placeholder="MyGame.exe" />
+                        <span asp-validation-for="ExecutablePath" class="text-danger"></span>
+                        <small>Relative path inside the ZIP, for example <code>NightParcel.exe</code> or <code>Game/MyGame.exe</code>.</small>
+                    </div>
+                </div>
+
+                <div class="admin-field">
+                    <label asp-for="ArchiveFile"></label>
+                    <input asp-for="ArchiveFile" type="file" class="admin-file-input" accept=".zip,application/zip" />
+                    <span asp-validation-for="ArchiveFile" class="text-danger"></span>
+                    <small>
+                        Upload the complete Windows game build as ZIP. Maximum 1 GB.
+                        @if (Model.HasExistingBuild)
+                        {
+                            <text> Leave empty to keep the existing archive.</text>
+                        }
+                    </small>
+                </div>
+
+                <div class="admin-upload-note">
+                    <span>ZIP</span>
+                    <p>
+                        The server verifies the ZIP signature and confirms that the configured executable exists inside the archive.
+                        Build archives are stored outside <code>wwwroot</code> and downloaded through an authenticated ownership-checked API endpoint.
+                    </p>
+                </div>
+            </section>
+        </div>
+
+        <aside class="admin-form-sidebar">
+            <section class="admin-form-side-card">
+                <div class="admin-side-heading">
+                    <span class="admin-form-section-number">02</span>
+                    <div>
+                        <h2>Launcher State</h2>
+                        <p>Current server-side build information.</p>
+                    </div>
+                </div>
+
+                @if (Model.HasExistingBuild)
+                {
+                    <div class="admin-field">
+                        <label>STATUS</label>
+                        <strong style="color:#66c0f4">PUBLISHED</strong>
+                    </div>
+                    <div class="admin-field">
+                        <label>ARCHIVE SIZE</label>
+                        <strong>@FormatBytes(Model.ExistingFileSizeBytes)</strong>
+                    </div>
+                    <div class="admin-field">
+                        <label>UPDATED</label>
+                        <strong>@(Model.ExistingUpdatedAt?.ToLocalTime().ToString("dd MMM yyyy HH:mm") ?? "Unknown")</strong>
+                    </div>
+                }
+                else
+                {
+                    <div class="admin-field">
+                        <label>STATUS</label>
+                        <strong>NO BUILD PUBLISHED</strong>
+                    </div>
+                }
+            </section>
+
+            <button type="submit" class="admin-create-game-button" style="width:100%;justify-content:center">
+                @(Model.HasExistingBuild ? "Update Build" : "Publish Build")
+            </button>
+        </aside>
+    </form>
+
+    @if (Model.HasExistingBuild)
+    {
+        <form asp-action="Remove" method="post" style="margin-top:20px">
+            <input type="hidden" name="gameId" value="@Model.GameId" />
+            <button type="submit" class="admin-delete-button" onclick="return confirm('Remove the published build? Installed local copies are not deleted.')">
+                Remove Published Build
+            </button>
+        </form>
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

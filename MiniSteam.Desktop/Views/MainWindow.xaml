@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:MiniSteam.Desktop.ViewModels"
         xmlns:views="clr-namespace:MiniSteam.Desktop.Views"
-        Title="MiniSteam Desktop v3.3"
+        Title="MiniSteam Desktop v3.4"
         MinWidth="640"
         MinHeight="520"
         Width="1380"

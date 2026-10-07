@@ -1,4 +1,6 @@
 using System.IO.Compression;
+using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace MiniSteam.Services
 {
@@ -6,12 +8,22 @@ namespace MiniSteam.Services
     {
         public string FileName { get; set; } = string.Empty;
         public long FileSizeBytes { get; set; }
+        public string Sha256 { get; set; } = string.Empty;
+    }
+
+    public sealed class GameBuildFileInfo
+    {
+        public string RelativePath { get; set; } = string.Empty;
+        public long Length { get; set; }
+        public string Sha256 { get; set; } = string.Empty;
     }
 
     public sealed class GameBuildArchiveInfo
     {
         public int FileCount { get; set; }
         public long UncompressedSizeBytes { get; set; }
+        public string ArchiveSha256 { get; set; } = string.Empty;
+        public List<GameBuildFileInfo> Files { get; set; } = new();
     }
 
     public interface IGameBuildStorageService
@@ -33,6 +45,10 @@ namespace MiniSteam.Services
         public const long DefaultMaxArchiveSizeBytes = 1024L * 1024L * 1024L; // 1 GiB
 
         private readonly string _storageDirectory;
+        private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
+        {
+            WriteIndented = true
+        };
 
         public GameBuildStorageService(IWebHostEnvironment environment)
         {
@@ -163,22 +179,40 @@ namespace MiniSteam.Services
 
             input.Position = 0;
 
-            await using (var output = new FileStream(
-                targetPath,
-                FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                81920,
-                useAsync: true))
+            try
             {
-                await input.CopyToAsync(output, cancellationToken);
-            }
+                await using (var output = new FileStream(
+                    targetPath,
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None,
+                    81920,
+                    useAsync: true))
+                {
+                    await input.CopyToAsync(output, cancellationToken);
+                }
 
-            return new SavedGameBuildArchive
+                // v3.4: persist a sidecar cryptographic manifest next to the private ZIP.
+                // This lets the API publish stable hashes without requiring a database schema change.
+                var archiveInfo = CreateArchiveInfo(targetPath);
+                await SaveArchiveManifestAsync(
+                    storedFileName,
+                    archiveInfo,
+                    cancellationToken);
+
+                return new SavedGameBuildArchive
+                {
+                    FileName = storedFileName,
+                    FileSizeBytes = archiveFile.Length,
+                    Sha256 = archiveInfo.ArchiveSha256
+                };
+            }
+            catch
             {
-                FileName = storedFileName,
-                FileSizeBytes = archiveFile.Length
-            };
+                TryDeleteFile(targetPath);
+                TryDeleteFile(GetManifestPath(storedFileName));
+                throw;
+            }
         }
 
         public bool ArchiveContainsExecutable(string archiveFileName, string executablePath)
@@ -214,23 +248,35 @@ namespace MiniSteam.Services
                 return null;
             }
 
+            var manifest = TryLoadArchiveManifest(archiveFileName);
+            if (manifest != null)
+            {
+                return manifest;
+            }
+
             try
             {
-                using var archive = ZipFile.OpenRead(path);
+                // Existing v3.2/v3.3 archives did not have a sidecar manifest.
+                // Generate it once on first access so old published builds become v3.4-compatible.
+                var archiveInfo = CreateArchiveInfo(path);
 
-                var files = archive.Entries
-                    .Where(entry =>
-                        !string.IsNullOrWhiteSpace(entry.FullName) &&
-                        !entry.FullName.Replace('\\', '/').EndsWith('/'))
-                    .ToList();
-
-                return new GameBuildArchiveInfo
+                try
                 {
-                    FileCount = files.Count,
-                    UncompressedSizeBytes = files.Sum(entry => entry.Length)
-                };
+                    SaveArchiveManifest(archiveFileName, archiveInfo);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    // Hash metadata is still valid for this response even if the
+                    // compatibility sidecar cannot be persisted for an old build.
+                }
+
+                return archiveInfo;
             }
             catch (InvalidDataException)
+            {
+                return null;
+            }
+            catch (IOException)
             {
                 return null;
             }
@@ -265,7 +311,149 @@ namespace MiniSteam.Services
             {
                 File.Delete(path);
             }
+
+            TryDeleteFile(GetManifestPath(archiveFileName));
         }
+
+        private GameBuildArchiveInfo? TryLoadArchiveManifest(string archiveFileName)
+        {
+            var manifestPath = GetManifestPath(archiveFileName);
+            if (!File.Exists(manifestPath))
+            {
+                return null;
+            }
+
+            try
+            {
+                var json = File.ReadAllText(manifestPath);
+                var manifest = JsonSerializer.Deserialize<GameBuildArchiveInfo>(json, _jsonOptions);
+
+                if (manifest == null ||
+                    !IsSha256(manifest.ArchiveSha256) ||
+                    manifest.Files is not { Count: > 0 } ||
+                    manifest.FileCount != manifest.Files.Count ||
+                    manifest.UncompressedSizeBytes != manifest.Files.Sum(file => file.Length) ||
+                    manifest.Files.Any(file =>
+                        string.IsNullOrWhiteSpace(file.RelativePath) ||
+                        file.Length < 0 ||
+                        !IsSha256(file.Sha256)))
+                {
+                    return null;
+                }
+
+                return manifest;
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+            catch (IOException)
+            {
+                return null;
+            }
+        }
+
+        private async Task SaveArchiveManifestAsync(
+            string archiveFileName,
+            GameBuildArchiveInfo archiveInfo,
+            CancellationToken cancellationToken)
+        {
+            var manifestPath = GetManifestPath(archiveFileName);
+            await using var stream = new FileStream(
+                manifestPath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                81920,
+                useAsync: true);
+
+            await JsonSerializer.SerializeAsync(
+                stream,
+                archiveInfo,
+                _jsonOptions,
+                cancellationToken);
+        }
+
+        private void SaveArchiveManifest(
+            string archiveFileName,
+            GameBuildArchiveInfo archiveInfo)
+        {
+            var manifestPath = GetManifestPath(archiveFileName);
+            var json = JsonSerializer.Serialize(archiveInfo, _jsonOptions);
+            File.WriteAllText(manifestPath, json);
+        }
+
+        private string GetManifestPath(string archiveFileName)
+        {
+            var safeName = Path.GetFileName(archiveFileName);
+            return Path.Combine(_storageDirectory, safeName + ".manifest.json");
+        }
+
+        private static GameBuildArchiveInfo CreateArchiveInfo(string archivePath)
+        {
+            var archiveSha256 = ComputeFileSha256(archivePath);
+            var files = new List<GameBuildFileInfo>();
+            var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            using var archive = ZipFile.OpenRead(archivePath);
+
+            foreach (var entry in archive.Entries)
+            {
+                if (!IsSafeArchiveEntry(entry.FullName))
+                {
+                    throw new InvalidDataException(
+                        $"The ZIP archive contains an unsafe path: '{entry.FullName}'.");
+                }
+
+                var normalizedPath = entry.FullName.Replace('\\', '/').TrimStart('/');
+                if (string.IsNullOrWhiteSpace(normalizedPath) || normalizedPath.EndsWith('/'))
+                {
+                    continue;
+                }
+
+                if (!seenPaths.Add(normalizedPath))
+                {
+                    throw new InvalidDataException(
+                        $"The ZIP archive contains the same file path more than once: '{normalizedPath}'.");
+                }
+
+                using var stream = entry.Open();
+                files.Add(new GameBuildFileInfo
+                {
+                    RelativePath = normalizedPath,
+                    Length = entry.Length,
+                    Sha256 = ComputeStreamSha256(stream)
+                });
+            }
+
+            if (files.Count == 0)
+            {
+                throw new InvalidDataException("The ZIP archive does not contain any files.");
+            }
+
+            return new GameBuildArchiveInfo
+            {
+                FileCount = files.Count,
+                UncompressedSizeBytes = files.Sum(file => file.Length),
+                ArchiveSha256 = archiveSha256,
+                Files = files
+            };
+        }
+
+        private static string ComputeFileSha256(string path)
+        {
+            using var stream = File.OpenRead(path);
+            return ComputeStreamSha256(stream);
+        }
+
+        private static string ComputeStreamSha256(Stream stream)
+        {
+            using var sha256 = SHA256.Create();
+            return Convert.ToHexString(sha256.ComputeHash(stream));
+        }
+
+        private static bool IsSha256(string? value) =>
+            value is { Length: 64 } && value.All(Uri.IsHexDigit);
 
         private static bool IsSafeArchiveEntry(string entryName)
         {
@@ -300,6 +488,21 @@ namespace MiniSteam.Services
             return (header[2] == 0x03 && header[3] == 0x04) ||
                    (header[2] == 0x05 && header[3] == 0x06) ||
                    (header[2] == 0x07 && header[3] == 0x08);
+        }
+
+        private static void TryDeleteFile(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch
+            {
+                // Cleanup failures should not mask the original publish/remove result.
+            }
         }
     }
 }

@@ -97,6 +97,23 @@
                                                 Padding="13,7"
                                                 Margin="0,0,7,0" />
 
+                                        <Button Content="VERIFY FILES"
+                                                Command="{Binding DataContext.VerifyCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                                CommandParameter="{Binding}"
+                                                Padding="11,7"
+                                                Margin="0,0,7,0">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding CanVerify}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+
                                         <Button Content="UNINSTALL"
                                                 Command="{Binding DataContext.UninstallCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                                 CommandParameter="{Binding}"
@@ -123,7 +140,7 @@
             <TextBlock Grid.Row="2" Text="{Binding StatusMessage}" Margin="0,14,0,0" />
 
             <Border Grid.Row="3" Margin="0,24,0,0" Background="#171D25" BorderBrush="#2A475E" BorderThickness="1" Padding="16">
-                <TextBlock Text="Launcher v3.3: full ZIP builds are staged, verified file-by-file, and atomically replaced on install/update. Missing dependencies are detected and offered for reinstall." TextWrapping="Wrap" Foreground="#8F98A0" />
+                <TextBlock Text="Launcher v3.4: downloaded archives and installed files use SHA-256 verification. VERIFY FILES checks the local build, REPAIR replaces damaged builds, running games are protected from update/uninstall, and install deletion is restricted to MiniSteam's expected game directories." TextWrapping="Wrap" Foreground="#8F98A0" />
             </Border>
         </Grid>
     </ScrollViewer>

@@ -37,6 +37,10 @@ namespace MiniSteam.Controllers
                 return NotFound();
             }
 
+            var archiveInfo = game.Build == null
+                ? null
+                : _storage.GetArchiveInfo(game.Build.ArchiveFileName);
+
             var model = new GameBuildViewModel
             {
                 GameId = game.Id,
@@ -46,6 +50,7 @@ namespace MiniSteam.Controllers
                 HasExistingBuild = game.Build != null,
                 ExistingArchiveFileName = game.Build?.ArchiveFileName,
                 ExistingFileSizeBytes = game.Build?.FileSizeBytes,
+                ExistingArchiveSha256 = archiveInfo?.ArchiveSha256,
                 ExistingUpdatedAt = game.Build?.UpdatedAt
             };
 
@@ -72,6 +77,9 @@ namespace MiniSteam.Controllers
             model.HasExistingBuild = game.Build != null;
             model.ExistingArchiveFileName = game.Build?.ArchiveFileName;
             model.ExistingFileSizeBytes = game.Build?.FileSizeBytes;
+            model.ExistingArchiveSha256 = game.Build == null
+                ? null
+                : _storage.GetArchiveInfo(game.Build.ArchiveFileName)?.ArchiveSha256;
             model.ExistingUpdatedAt = game.Build?.UpdatedAt;
 
             model.Version = model.Version?.Trim() ?? string.Empty;

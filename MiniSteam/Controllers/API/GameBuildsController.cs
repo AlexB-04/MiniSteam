@@ -70,7 +70,22 @@ namespace MiniSteam.Controllers.API
                     "BuildArchiveMissing");
             }
 
-            return Ok(ToDto(build));
+            var archiveInfo = _storage.GetArchiveInfo(build.ArchiveFileName);
+            if (archiveInfo == null)
+            {
+                _logger.LogError(
+                    "Build archive {ArchiveFileName} could not produce an integrity manifest for game {GameId}",
+                    build.ArchiveFileName,
+                    gameId);
+
+                return this.ApiProblem(
+                    StatusCodes.Status503ServiceUnavailable,
+                    "Build integrity metadata unavailable.",
+                    "MiniSteam could not validate the published build archive.",
+                    "BuildIntegrityUnavailable");
+            }
+
+            return Ok(ToDto(build, archiveInfo));
         }
 
         [HttpGet("download")]
@@ -142,18 +157,25 @@ namespace MiniSteam.Controllers.API
             return await _libraryService.OwnsGameAsync(userId, gameId);
         }
 
-        private GameBuildDto ToDto(MiniSteam.Models.Entities.GameBuild build)
+        private static GameBuildDto ToDto(
+            MiniSteam.Models.Entities.GameBuild build,
+            GameBuildArchiveInfo archiveInfo)
         {
-            var archiveInfo = _storage.GetArchiveInfo(build.ArchiveFileName);
-
             return new GameBuildDto
             {
                 GameId = build.GameId,
                 GameName = build.Game.Name,
                 Version = build.Version,
                 FileSizeBytes = build.FileSizeBytes,
-                ArchiveFileCount = archiveInfo?.FileCount ?? 0,
-                UncompressedSizeBytes = archiveInfo?.UncompressedSizeBytes ?? 0,
+                ArchiveFileCount = archiveInfo.FileCount,
+                UncompressedSizeBytes = archiveInfo.UncompressedSizeBytes,
+                ArchiveSha256 = archiveInfo.ArchiveSha256,
+                Files = archiveInfo.Files.Select(file => new GameBuildFileDto
+                {
+                    RelativePath = file.RelativePath,
+                    Length = file.Length,
+                    Sha256 = file.Sha256
+                }).ToList(),
                 ExecutablePath = build.ExecutablePath,
                 DownloadUrl = $"api/games/{build.GameId}/build/download",
                 UpdatedAt = build.UpdatedAt

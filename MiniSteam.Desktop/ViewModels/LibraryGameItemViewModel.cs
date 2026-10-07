@@ -94,7 +94,7 @@ public sealed class LibraryGameItemViewModel : ViewModelBase
     {
         LauncherGameState.Installed => "PLAY",
         LauncherGameState.UpdateAvailable => "UPDATE",
-        LauncherGameState.Broken => Build == null ? "BROKEN" : "REINSTALL",
+        LauncherGameState.Broken => Build == null ? "BROKEN" : "REPAIR",
         LauncherGameState.NotInstalled => "INSTALL",
         _ => "NO BUILD"
     };
@@ -104,17 +104,24 @@ public sealed class LibraryGameItemViewModel : ViewModelBase
 
     public bool CanUninstall => !IsLauncherBusy && Installed != null;
 
+    public bool CanVerify => !IsLauncherBusy && Installed != null;
+
+    public bool HasSha256Inventory => Installed?.Files is { Count: > 0 } &&
+        Installed.Files.All(file => !string.IsNullOrWhiteSpace(file.Sha256));
+
     public string BuildStatusText => LauncherState switch
     {
         LauncherGameState.NoBuild => "No downloadable build published",
         LauncherGameState.NotInstalled => Build == null
             ? "Not installed"
-            : $"Build {Build.Version} · {Build.FileSizeText} · {Build.ArchiveFileCount} files",
-        LauncherGameState.Installed => Installed?.Files.Count > 0
-            ? $"Installed · v{Installed.Version} · {Installed.Files.Count} files verified"
-            : $"Installed · v{Installed?.Version}",
-        LauncherGameState.UpdateAvailable => $"Installed v{Installed?.Version} · Update v{Build?.Version} · {Build?.ArchiveFileCount} files",
-        LauncherGameState.Broken => "Build integrity failed · reinstall required",
+            : $"Build {Build.Version} · {Build.FileSizeText} · {Build.ArchiveFileCount} files · SHA-256",
+        LauncherGameState.Installed => HasSha256Inventory
+            ? $"Installed · v{Installed?.Version} · {Installed?.Files.Count} files · SHA-256 verified"
+            : $"Installed · v{Installed?.Version} · legacy integrity inventory",
+        LauncherGameState.UpdateAvailable => HasSha256Inventory
+            ? $"Installed v{Installed?.Version} · SHA-256 inventory · Update v{Build?.Version}"
+            : $"Installed v{Installed?.Version} · Update v{Build?.Version} · legacy integrity inventory",
+        LauncherGameState.Broken => "Build integrity failed · repair required",
         _ => string.Empty
     };
 
@@ -127,6 +134,8 @@ public sealed class LibraryGameItemViewModel : ViewModelBase
         OnPropertyChanged(nameof(PrimaryActionText));
         OnPropertyChanged(nameof(CanPrimaryAction));
         OnPropertyChanged(nameof(CanUninstall));
+        OnPropertyChanged(nameof(CanVerify));
+        OnPropertyChanged(nameof(HasSha256Inventory));
         OnPropertyChanged(nameof(BuildStatusText));
         OnPropertyChanged(nameof(ProgressText));
     }

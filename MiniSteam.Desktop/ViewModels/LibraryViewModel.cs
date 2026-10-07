@@ -26,6 +26,7 @@ public sealed class LibraryViewModel : ViewModelBase
         RefreshCommand = new AsyncRelayCommand(LoadAsync);
         OpenGameCommand = new AsyncRelayCommand<LibraryGameItemViewModel>(OpenGameAsync, item => item != null && !IsBusy);
         PrimaryActionCommand = new AsyncRelayCommand<LibraryGameItemViewModel>(PrimaryActionAsync, item => item?.CanPrimaryAction == true && !IsBusy);
+        VerifyCommand = new AsyncRelayCommand<LibraryGameItemViewModel>(VerifyAsync, item => item?.CanVerify == true && !IsBusy);
         UninstallCommand = new AsyncRelayCommand<LibraryGameItemViewModel>(UninstallAsync, item => item?.CanUninstall == true && !IsBusy);
     }
 
@@ -54,6 +55,7 @@ public sealed class LibraryViewModel : ViewModelBase
     public AsyncRelayCommand RefreshCommand { get; }
     public AsyncRelayCommand<LibraryGameItemViewModel> OpenGameCommand { get; }
     public AsyncRelayCommand<LibraryGameItemViewModel> PrimaryActionCommand { get; }
+    public AsyncRelayCommand<LibraryGameItemViewModel> VerifyCommand { get; }
     public AsyncRelayCommand<LibraryGameItemViewModel> UninstallCommand { get; }
 
     public async Task LoadAsync()
@@ -126,7 +128,15 @@ public sealed class LibraryViewModel : ViewModelBase
                 _installationService.Launch(item.Installed);
                 item.LauncherMessage = "Game launched.";
             }
-            catch (Exception ex) when (ex is IOException or InvalidDataException or System.ComponentModel.Win32Exception)
+            catch (InvalidOperationException ex)
+            {
+                item.LauncherMessage = ex.Message;
+            }
+            catch (System.ComponentModel.Win32Exception ex)
+            {
+                item.LauncherMessage = $"Windows could not start the game: {ex.Message}";
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException)
             {
                 item.LauncherMessage = ex.Message;
                 item.LauncherState = LauncherGameState.Broken;
@@ -166,6 +176,57 @@ public sealed class LibraryViewModel : ViewModelBase
             item.LauncherMessage = ex.Message;
             item.Installed = await SafeGetInstalledAsync(item.GameId);
             item.LauncherState = _installationService.GetLocalState(item.Build, item.Installed);
+        }
+        finally
+        {
+            item.IsLauncherBusy = false;
+            RaiseCommandStates();
+        }
+    }
+
+
+    private async Task VerifyAsync(LibraryGameItemViewModel? item)
+    {
+        if (item?.Installed == null || item.IsLauncherBusy)
+        {
+            return;
+        }
+
+        item.IsLauncherBusy = true;
+        item.ProgressPercent = 0;
+        item.LauncherMessage = "Verifying installed files with SHA-256...";
+        RaiseCommandStates();
+
+        try
+        {
+            var progress = new Progress<VerificationProgress>(value =>
+            {
+                item.ProgressPercent = value.Percent;
+                item.LauncherMessage = $"Verifying files {value.FilesChecked}/{value.TotalFiles} · {value.Percent}%";
+            });
+
+            var result = await _installationService.VerifyInstalledAsync(
+                item.Build,
+                item.Installed,
+                progress);
+
+            item.ProgressPercent = 100;
+            item.LauncherState = _installationService.GetLocalState(item.Build, item.Installed);
+            item.LauncherMessage = result.UpgradedLegacyManifest
+                ? $"Verification passed · {result.FilesChecked} files · legacy install upgraded to SHA-256 inventory."
+                : $"Verification passed · {result.FilesChecked} files matched SHA-256.";
+
+            // VerifyInstalledAsync may upgrade a legacy record in the local manifest.
+            item.Installed = await _installationService.GetInstalledAsync(item.GameId) ?? item.Installed;
+        }
+        catch (InvalidOperationException ex)
+        {
+            item.LauncherMessage = ex.Message;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            item.LauncherMessage = ex.Message;
+            item.LauncherState = LauncherGameState.Broken;
         }
         finally
         {
@@ -221,6 +282,7 @@ public sealed class LibraryViewModel : ViewModelBase
         RefreshCommand.RaiseCanExecuteChanged();
         OpenGameCommand.RaiseCanExecuteChanged();
         PrimaryActionCommand.RaiseCanExecuteChanged();
+        VerifyCommand.RaiseCanExecuteChanged();
         UninstallCommand.RaiseCanExecuteChanged();
     }
 }

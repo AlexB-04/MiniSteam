@@ -3,6 +3,7 @@ using MiniSteam.Desktop.Models;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text.Json;
 
 namespace MiniSteam.Desktop.Services;
@@ -30,9 +31,7 @@ public sealed class InstallationService
 
     public string InstallRoot => _installRoot;
 
-    public async Task<GameBuildDto?> GetBuildAsync(
-        int gameId,
-        CancellationToken cancellationToken = default)
+    public async Task<GameBuildDto?> GetBuildAsync(int gameId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -47,21 +46,19 @@ public sealed class InstallationService
         }
     }
 
-    public async Task<InstalledGameRecord?> GetInstalledAsync(
-        int gameId,
-        CancellationToken cancellationToken = default)
+    public async Task<InstalledGameRecord?> GetInstalledAsync(int gameId, CancellationToken cancellationToken = default)
     {
         var records = await LoadManifestAsync(cancellationToken);
         return records.FirstOrDefault(record => record.GameId == gameId);
     }
 
-    public LauncherGameState GetLocalState(
-        GameBuildDto? build,
-        InstalledGameRecord? installed)
+    public LauncherGameState GetLocalState(GameBuildDto? build, InstalledGameRecord? installed)
     {
         if (installed != null)
         {
-            if (!IsInstalledContentHealthy(build, installed))
+            // Keep the normal Library refresh lightweight. Full SHA-256 verification
+            // is done during install/update and when the user presses VERIFY FILES.
+            if (!IsInstalledContentHealthyQuick(build, installed))
             {
                 return LauncherGameState.Broken;
             }
@@ -93,7 +90,19 @@ public sealed class InstallationService
         var gameDirectoryName = $"{build.GameId}-{SanitizeDirectoryName(build.GameName)}";
         var finalDirectory = Path.Combine(_installRoot, gameDirectoryName);
         var previousInstalled = await GetInstalledAsync(build.GameId, cancellationToken);
-        var previousDirectory = previousInstalled?.InstallDirectory;
+        string? previousDirectory = null;
+
+        if (previousInstalled != null)
+        {
+            previousDirectory = ValidateInstalledDirectory(previousInstalled);
+
+            if (IsGameRunning(previousInstalled))
+            {
+                throw new IOException(
+                    $"Close {previousInstalled.GameName} before updating or repairing it.");
+            }
+        }
+
         var backupDirectory = Path.Combine(
             _installRoot,
             $".backup-{build.GameId}-{Guid.NewGuid():N}");
@@ -126,6 +135,8 @@ public sealed class InstallationService
                     $"Downloaded archive size does not match the server metadata. Expected {build.FileSizeBytes} bytes, received {downloadedSize} bytes.");
             }
 
+            VerifyArchiveSha256(tempArchive, build.ArchiveSha256);
+
             Directory.CreateDirectory(stagingDirectory);
             var extractedFiles = ExtractArchiveSafely(
                 tempArchive,
@@ -133,7 +144,11 @@ public sealed class InstallationService
                 cancellationToken);
 
             ValidateArchiveStatistics(build, extractedFiles);
-            VerifyInstalledFiles(stagingDirectory, extractedFiles);
+            VerifyInstalledFiles(
+                stagingDirectory,
+                extractedFiles,
+                progress: null,
+                cancellationToken);
 
             var stagingExecutable = GetSafeChildPath(stagingDirectory, build.ExecutablePath);
             if (!File.Exists(stagingExecutable))
@@ -163,9 +178,12 @@ public sealed class InstallationService
 
                 Directory.Move(stagingDirectory, finalDirectory);
 
-                // v3.3: never commit an install/update until every file from the ZIP
-                // is present at the final destination with the expected size.
-                VerifyInstalledFiles(finalDirectory, extractedFiles);
+                // v3.4: final verification now checks SHA-256 as well as path/size.
+                VerifyInstalledFiles(
+                    finalDirectory,
+                    extractedFiles,
+                    progress: null,
+                    cancellationToken);
 
                 var record = new InstalledGameRecord
                 {
@@ -208,6 +226,63 @@ public sealed class InstallationService
         }
     }
 
+    public async Task<InstallationVerificationResult> VerifyInstalledAsync(
+        GameBuildDto? build,
+        InstalledGameRecord installed,
+        IProgress<VerificationProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var installDirectory = ValidateInstalledDirectory(installed);
+        var expectedFiles = installed.Files ?? new List<InstalledGameFileRecord>();
+        var upgradedLegacyManifest = false;
+
+        var hasLocalHashes = expectedFiles.Count > 0 &&
+            expectedFiles.All(file => IsSha256(file.Sha256));
+
+        if (!hasLocalHashes)
+        {
+            if (build == null ||
+                !string.Equals(installed.Version, build.Version, StringComparison.OrdinalIgnoreCase) ||
+                build.Files is not { Count: > 0 } ||
+                build.Files.Any(file => !IsSha256(file.Sha256)))
+            {
+                throw new InvalidOperationException(
+                    "This installation predates MiniSteam SHA-256 inventory. Update or repair the game once to create a trusted hash manifest.");
+            }
+
+            expectedFiles = build.Files
+                .Select(file => new InstalledGameFileRecord
+                {
+                    RelativePath = file.RelativePath,
+                    Length = file.Length,
+                    Sha256 = file.Sha256
+                })
+                .ToList();
+
+            upgradedLegacyManifest = true;
+        }
+
+        await Task.Run(
+            () => VerifyInstalledFiles(
+                installDirectory,
+                expectedFiles,
+                progress,
+                cancellationToken),
+            cancellationToken);
+
+        if (upgradedLegacyManifest)
+        {
+            installed.Files = expectedFiles;
+            await UpsertRecordAsync(installed, cancellationToken);
+        }
+
+        return new InstallationVerificationResult
+        {
+            FilesChecked = expectedFiles.Count,
+            UpgradedLegacyManifest = upgradedLegacyManifest
+        };
+    }
+
     public void Launch(InstalledGameRecord installed)
     {
         var executablePath = GetInstalledExecutablePath(installed);
@@ -215,14 +290,20 @@ public sealed class InstallationService
         if (!File.Exists(executablePath))
         {
             throw new FileNotFoundException(
-                "The installed game executable could not be found. Reinstall the game from MiniSteam.",
+                "The installed game executable could not be found. Repair the game from MiniSteam.",
                 executablePath);
+        }
+
+        if (IsGameRunning(installed))
+        {
+            throw new InvalidOperationException(
+                $"{installed.GameName} is already running.");
         }
 
         Process.Start(new ProcessStartInfo
         {
             FileName = executablePath,
-            WorkingDirectory = installed.InstallDirectory,
+            WorkingDirectory = Path.GetDirectoryName(executablePath) ?? installed.InstallDirectory,
             UseShellExecute = true
         });
     }
@@ -234,28 +315,87 @@ public sealed class InstallationService
         var records = await LoadManifestAsync(cancellationToken);
         var record = records.FirstOrDefault(item => item.GameId == gameId);
 
-        if (record != null && Directory.Exists(record.InstallDirectory))
+        if (record != null)
         {
-            try
-            {
-                Directory.Delete(record.InstallDirectory, recursive: true);
-            }
-            catch (IOException exception)
+            var installDirectory = ValidateInstalledDirectory(record);
+
+            if (IsGameRunning(record))
             {
                 throw new IOException(
-                    "MiniSteam could not remove the game files. Close the game and try again.",
-                    exception);
+                    $"Close {record.GameName} before uninstalling it.");
             }
-            catch (UnauthorizedAccessException exception)
+
+            if (Directory.Exists(installDirectory))
             {
-                throw new UnauthorizedAccessException(
-                    "MiniSteam does not have permission to remove the installed game files.",
-                    exception);
+                try
+                {
+                    Directory.Delete(installDirectory, recursive: true);
+                }
+                catch (IOException exception)
+                {
+                    throw new IOException(
+                        "MiniSteam could not remove the game files. Close the game and try again.",
+                        exception);
+                }
+                catch (UnauthorizedAccessException exception)
+                {
+                    throw new UnauthorizedAccessException(
+                        "MiniSteam does not have permission to remove the installed game files.",
+                        exception);
+                }
             }
         }
 
         records.RemoveAll(item => item.GameId == gameId);
         await SaveManifestAsync(records, cancellationToken);
+    }
+
+    public bool IsGameRunning(InstalledGameRecord installed)
+    {
+        string executablePath;
+
+        try
+        {
+            executablePath = GetInstalledExecutablePath(installed);
+        }
+        catch (InvalidDataException)
+        {
+            return false;
+        }
+
+        var processName = Path.GetFileNameWithoutExtension(executablePath);
+        if (string.IsNullOrWhiteSpace(processName))
+        {
+            return false;
+        }
+
+        foreach (var process in Process.GetProcessesByName(processName))
+        {
+            using (process)
+            {
+                try
+                {
+                    var processPath = process.MainModule?.FileName;
+                    if (!string.IsNullOrWhiteSpace(processPath) &&
+                        string.Equals(
+                            Path.GetFullPath(processPath),
+                            Path.GetFullPath(executablePath),
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+                catch (Exception ex) when (
+                    ex is System.ComponentModel.Win32Exception or
+                    InvalidOperationException or
+                    NotSupportedException)
+                {
+                    // A process that cannot expose its module path is ignored.
+                }
+            }
+        }
+
+        return false;
     }
 
     private async Task<List<InstalledGameRecord>> LoadManifestAsync(
@@ -347,6 +487,35 @@ public sealed class InstallationService
             throw new InvalidDataException("The server returned incomplete build metadata.");
         }
 
+        if (!IsSha256(build.ArchiveSha256))
+        {
+            throw new InvalidDataException(
+                "The server build does not provide a valid SHA-256 archive hash.");
+        }
+
+        if (build.Files is not { Count: > 0 } ||
+            build.Files.Any(file =>
+                string.IsNullOrWhiteSpace(file.RelativePath) ||
+                file.Length < 0 ||
+                !IsSha256(file.Sha256)))
+        {
+            throw new InvalidDataException(
+                "The server build does not provide a valid per-file SHA-256 manifest.");
+        }
+
+        var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var file in build.Files)
+        {
+            _ = GetSafeChildPath(Path.GetTempPath(), file.RelativePath);
+
+            var normalizedPath = file.RelativePath.Replace('\\', '/');
+            if (!seenPaths.Add(normalizedPath))
+            {
+                throw new InvalidDataException(
+                    $"The server build manifest contains the same path more than once: '{normalizedPath}'.");
+            }
+        }
+
         _ = GetSafeChildPath(Path.GetTempPath(), build.ExecutablePath);
     }
 
@@ -369,11 +538,22 @@ public sealed class InstallationService
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var normalizedEntryName = entry.FullName.Replace('\\', '/').TrimStart('/');
-            if (string.IsNullOrWhiteSpace(normalizedEntryName))
+            var rawEntryName = entry.FullName.Replace('\\', '/');
+            if (string.IsNullOrWhiteSpace(rawEntryName))
             {
                 continue;
             }
+
+            if (rawEntryName.StartsWith('/') ||
+                rawEntryName.Contains(':') ||
+                rawEntryName.Any(char.IsControl) ||
+                rawEntryName.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(part => part == ".."))
+            {
+                throw new InvalidDataException(
+                    $"The build archive contains an unsafe path: '{entry.FullName}'.");
+            }
+
+            var normalizedEntryName = rawEntryName;
 
             var targetPath = Path.GetFullPath(
                 Path.Combine(
@@ -423,7 +603,8 @@ public sealed class InstallationService
             extractedFiles.Add(new InstalledGameFileRecord
             {
                 RelativePath = normalizedEntryName,
-                Length = entry.Length
+                Length = entry.Length,
+                Sha256 = ComputeFileSha256(targetPath)
             });
         }
 
@@ -453,52 +634,98 @@ public sealed class InstallationService
             throw new InvalidDataException(
                 $"Extracted build size does not match the server metadata. Expected {build.UncompressedSizeBytes} bytes, received {extractedBytes} bytes.");
         }
+
+        if (build.Files.Count != extractedFiles.Count)
+        {
+            throw new InvalidDataException(
+                "Extracted file inventory does not match the server SHA-256 manifest.");
+        }
+
+        var expectedByPath = build.Files.ToDictionary(
+            file => file.RelativePath.Replace('\\', '/'),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var extracted in extractedFiles)
+        {
+            if (!expectedByPath.TryGetValue(extracted.RelativePath, out var expected) ||
+                expected.Length != extracted.Length ||
+                !string.Equals(expected.Sha256, extracted.Sha256, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException(
+                    $"Extracted file '{extracted.RelativePath}' does not match the server SHA-256 manifest.");
+            }
+        }
     }
 
     private static void VerifyInstalledFiles(
         string rootDirectory,
-        IReadOnlyCollection<InstalledGameFileRecord> files)
+        IReadOnlyCollection<InstalledGameFileRecord> files,
+        IProgress<VerificationProgress>? progress,
+        CancellationToken cancellationToken)
     {
+        var checkedCount = 0;
+
         foreach (var file in files)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var path = GetSafeChildPath(rootDirectory, file.RelativePath);
 
             if (!File.Exists(path))
             {
                 throw new InvalidDataException(
-                    $"Installation verification failed because '{file.RelativePath}' is missing.");
+                    $"Verification failed because '{file.RelativePath}' is missing.");
             }
 
             var actualLength = new FileInfo(path).Length;
             if (actualLength != file.Length)
             {
                 throw new InvalidDataException(
-                    $"Installation verification failed because '{file.RelativePath}' has an unexpected size.");
+                    $"Verification failed because '{file.RelativePath}' has an unexpected size.");
             }
+
+            if (IsSha256(file.Sha256))
+            {
+                var actualSha256 = ComputeFileSha256(path);
+                if (!string.Equals(actualSha256, file.Sha256, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidDataException(
+                        $"Verification failed because '{file.RelativePath}' has an unexpected SHA-256 hash.");
+                }
+            }
+
+            checkedCount++;
+            progress?.Report(new VerificationProgress
+            {
+                FilesChecked = checkedCount,
+                TotalFiles = files.Count
+            });
         }
     }
 
-    private static bool IsInstalledContentHealthy(
+    private bool IsInstalledContentHealthyQuick(
         GameBuildDto? build,
         InstalledGameRecord installed)
     {
         try
         {
-            if (!Directory.Exists(installed.InstallDirectory) ||
+            var installDirectory = ValidateInstalledDirectory(installed);
+
+            if (!Directory.Exists(installDirectory) ||
                 !File.Exists(GetInstalledExecutablePath(installed)))
             {
                 return false;
             }
 
-            // Builds installed by v3.3+ record every archive file.
-            // Exact verification catches missing Unity data folders, DLLs,
-            // scripts and other dependencies even when the main .exe survives.
+            // Fast path for normal Library refresh: missing files and size changes
+            // are detected immediately. Same-size corruption is caught by install-time
+            // SHA-256 and by the explicit VERIFY FILES command.
             if (installed.Files is { Count: > 0 })
             {
                 foreach (var file in installed.Files)
                 {
                     var path = GetSafeChildPath(
-                        installed.InstallDirectory,
+                        installDirectory,
                         file.RelativePath);
 
                     if (!File.Exists(path) ||
@@ -511,13 +738,11 @@ public sealed class InstallationService
                 return true;
             }
 
-            // Legacy v3.2 manifests did not store a file inventory. When the
-            // server exposes archive statistics, use them to detect obviously
-            // incomplete legacy installs and offer REINSTALL.
+            // Legacy v3.2 manifests did not store a file inventory.
             if (build != null)
             {
                 var installedPaths = Directory.EnumerateFiles(
-                        installed.InstallDirectory,
+                        installDirectory,
                         "*",
                         SearchOption.AllDirectories)
                     .ToList();
@@ -551,8 +776,46 @@ public sealed class InstallationService
         }
     }
 
-    private static string GetInstalledExecutablePath(InstalledGameRecord installed) =>
-        GetSafeChildPath(installed.InstallDirectory, installed.ExecutablePath);
+    private string GetInstalledExecutablePath(InstalledGameRecord installed)
+    {
+        var installDirectory = ValidateInstalledDirectory(installed);
+        return GetSafeChildPath(installDirectory, installed.ExecutablePath);
+    }
+
+    private string ValidateInstalledDirectory(InstalledGameRecord installed) =>
+        ValidateInstalledDirectory(installed.GameId, installed.InstallDirectory);
+
+    private string ValidateInstalledDirectory(int gameId, string installDirectory)
+    {
+        if (gameId <= 0 || string.IsNullOrWhiteSpace(installDirectory))
+        {
+            throw new InvalidDataException("MiniSteam's local install manifest contains an invalid game directory.");
+        }
+
+        var root = Path.GetFullPath(_installRoot)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var candidate = Path.GetFullPath(installDirectory)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        if (string.Equals(candidate, root, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException(
+                "MiniSteam refused an unsafe install path that points to the library root.");
+        }
+
+        var parent = Path.GetDirectoryName(candidate);
+        var directoryName = Path.GetFileName(candidate);
+
+        if (string.IsNullOrWhiteSpace(parent) ||
+            !string.Equals(parent, root, StringComparison.OrdinalIgnoreCase) ||
+            !directoryName.StartsWith($"{gameId}-", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException(
+                "MiniSteam refused an install path outside the expected game directory inside the library root.");
+        }
+
+        return candidate;
+    }
 
     private static string GetSafeChildPath(string root, string relativePath)
     {
@@ -561,7 +824,7 @@ public sealed class InstallationService
             relativePath.Contains(':') ||
             relativePath.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries).Any(part => part == ".."))
         {
-            throw new InvalidDataException("The build contains an invalid executable path.");
+            throw new InvalidDataException("The build contains an invalid relative path.");
         }
 
         var rootPath = Path.GetFullPath(root)
@@ -573,11 +836,31 @@ public sealed class InstallationService
 
         if (!childPath.StartsWith(rootPath, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidDataException("The build contains an unsafe executable path.");
+            throw new InvalidDataException("The build contains an unsafe relative path.");
         }
 
         return childPath;
     }
+
+    private static void VerifyArchiveSha256(string archivePath, string expectedSha256)
+    {
+        var actualSha256 = ComputeFileSha256(archivePath);
+        if (!string.Equals(actualSha256, expectedSha256, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException(
+                "Downloaded build failed SHA-256 verification and was rejected.");
+        }
+    }
+
+    private static string ComputeFileSha256(string path)
+    {
+        using var stream = File.OpenRead(path);
+        using var sha256 = SHA256.Create();
+        return Convert.ToHexString(sha256.ComputeHash(stream));
+    }
+
+    private static bool IsSha256(string? value) =>
+        value is { Length: 64 } && value.All(Uri.IsHexDigit);
 
     private static string SanitizeDirectoryName(string value)
     {

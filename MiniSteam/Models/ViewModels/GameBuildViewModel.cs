@@ -23,6 +23,7 @@ namespace MiniSteam.Models.ViewModels
         public bool HasExistingBuild { get; set; }
         public string? ExistingArchiveFileName { get; set; }
         public long? ExistingFileSizeBytes { get; set; }
+        public string? ExistingArchiveSha256 { get; set; }
         public DateTime? ExistingUpdatedAt { get; set; }
     }
 }

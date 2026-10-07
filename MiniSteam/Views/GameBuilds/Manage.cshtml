@@ -93,7 +93,7 @@
                 <div class="admin-upload-note">
                     <span>ZIP</span>
                     <p>
-                        The server verifies the ZIP signature and confirms that the configured executable exists inside the archive.
+                        The server verifies the ZIP signature and executable, then creates an SHA-256 manifest for the archive and every build file.
                         Build archives are stored outside <code>wwwroot</code> and downloaded through an authenticated ownership-checked API endpoint.
                     </p>
                 </div>
@@ -120,6 +120,13 @@
                         <label>ARCHIVE SIZE</label>
                         <strong>@FormatBytes(Model.ExistingFileSizeBytes)</strong>
                     </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.ExistingArchiveSha256))
+                    {
+                        <div class="admin-field">
+                            <label>ARCHIVE SHA-256</label>
+                            <code style="word-break:break-all;font-size:11px">@Model.ExistingArchiveSha256</code>
+                        </div>
+                    }
                     <div class="admin-field">
                         <label>UPDATED</label>
                         <strong>@(Model.ExistingUpdatedAt?.ToLocalTime().ToString("dd MMM yyyy HH:mm") ?? "Unknown")</strong>

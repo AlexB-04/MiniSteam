@@ -4,8 +4,8 @@
         xmlns:vm="clr-namespace:MiniSteam.Desktop.ViewModels"
         xmlns:views="clr-namespace:MiniSteam.Desktop.Views"
         Title="MiniSteam Desktop v3.3"
-        MinWidth="1080"
-        MinHeight="700"
+        MinWidth="640"
+        MinHeight="520"
         Width="1380"
         Height="860"
         WindowStartupLocation="CenterScreen"
@@ -35,7 +35,7 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0" Background="#171D25" BorderBrush="#2A475E" BorderThickness="0,0,0,1">
-            <Grid Margin="34,0">
+            <Grid x:Name="TopBarGrid" Margin="34,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
@@ -47,26 +47,26 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,24,0">
+                <StackPanel x:Name="BrandPanel" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,24,0">
                     <Border Width="38" Height="38" CornerRadius="19" Background="#1A9FFF" Margin="0,0,10,0">
                         <TextBlock Text="M" Foreground="White" FontWeight="Bold" FontSize="20"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
-                    <TextBlock Text="MINISTEAM" Foreground="White" FontSize="21" FontWeight="SemiBold"
+                    <TextBlock x:Name="BrandText" Text="MINISTEAM" Foreground="White" FontSize="21" FontWeight="SemiBold"
                                VerticalAlignment="Center" />
                 </StackPanel>
 
-                <Button Grid.Column="1" Content="STORE" Command="{Binding StoreCommand}" Style="{StaticResource NavButton}" />
-                <Button Grid.Column="2" Content="LIBRARY" Command="{Binding LibraryCommand}" Style="{StaticResource NavButton}" />
-                <Button Grid.Column="3" Content="WISHLIST" Command="{Binding WishlistCommand}" Style="{StaticResource NavButton}" />
-                <Button Grid.Column="4" Content="CART" Command="{Binding CartCommand}" Style="{StaticResource NavButton}" />
+                <Button x:Name="StoreNavButton" Grid.Column="1" Content="STORE" Command="{Binding StoreCommand}" Style="{StaticResource NavButton}" />
+                <Button x:Name="LibraryNavButton" Grid.Column="2" Content="LIBRARY" Command="{Binding LibraryCommand}" Style="{StaticResource NavButton}" />
+                <Button x:Name="WishlistNavButton" Grid.Column="3" Content="WISHLIST" Command="{Binding WishlistCommand}" Style="{StaticResource NavButton}" />
+                <Button x:Name="CartNavButton" Grid.Column="4" Content="CART" Command="{Binding CartCommand}" Style="{StaticResource NavButton}" />
 
-                <TextBlock Grid.Column="6"
+                <TextBlock x:Name="UserTextBlock" Grid.Column="6"
                            Text="{Binding UserText}"
                            VerticalAlignment="Center"
                            Foreground="#8F98A0"
                            Margin="16,0" />
-                <Button Grid.Column="7" Content="LOG OUT" Command="{Binding LogoutCommand}" Style="{StaticResource SecondaryButton}" Padding="14,8" />
+                <Button x:Name="LogoutButton" Grid.Column="7" Content="LOG OUT" Command="{Binding LogoutCommand}" Style="{StaticResource SecondaryButton}" Padding="14,8" />
             </Grid>
         </Border>
 

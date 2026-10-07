@@ -1,8 +1,9 @@
 <UserControl x:Class="MiniSteam.Desktop.Views.GameDetailsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid Margin="48,34,48,60">
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="28,30,28,48">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -20,9 +21,19 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Background="#0E141B" BorderBrush="#2A475E" BorderThickness="1" MinHeight="330" Margin="0,0,22,0">
+                <Button Grid.Column="0"
+                        Command="{Binding OpenGalleryImageCommand}"
+                        CommandParameter="{Binding Game.ImageUrl}"
+                        Background="#0E141B"
+                        BorderBrush="#2A475E"
+                        BorderThickness="1"
+                        Padding="0"
+                        MinHeight="330"
+                        Margin="0,0,22,0"
+                        Cursor="Hand"
+                        ToolTip="Open image">
                     <Image Source="{Binding Game.ImageUrl}" Stretch="UniformToFill" />
-                </Border>
+                </Button>
 
                 <StackPanel Grid.Column="1">
                     <StackPanel Orientation="Horizontal">
@@ -108,9 +119,19 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Width="265" Height="150" Margin="0,0,12,12" BorderBrush="#2A475E" BorderThickness="1" Background="#0E141B">
+                            <Button Width="265"
+                                    Height="150"
+                                    Margin="0,0,12,12"
+                                    Padding="0"
+                                    Background="#0E141B"
+                                    BorderBrush="#2A475E"
+                                    BorderThickness="1"
+                                    Cursor="Hand"
+                                    ToolTip="Open screenshot"
+                                    Command="{Binding DataContext.OpenGalleryImageCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                    CommandParameter="{Binding}">
                                 <Image Source="{Binding}" Stretch="UniformToFill" />
-                            </Border>
+                            </Button>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -222,5 +243,44 @@
 
             <TextBlock Grid.Row="5" Text="{Binding StatusMessage}" Foreground="{StaticResource DangerBrush}" Margin="0,22,0,0" TextWrapping="Wrap" />
         </Grid>
-    </ScrollViewer>
+        </ScrollViewer>
+
+        <Grid Panel.ZIndex="50" Background="#E6000000">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsGalleryOpen}" Value="True">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="20,16,20,8">
+                <TextBlock Text="{Binding GalleryCounterText}" Foreground="#C7D5E0" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Button Content="✕" Command="{Binding CloseGalleryCommand}" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Right" Padding="12,7" />
+            </Grid>
+
+            <Grid Grid.Row="1" Margin="20,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Content="‹" Command="{Binding PreviousGalleryImageCommand}" Style="{StaticResource SecondaryButton}" FontSize="28" Width="52" Height="64" Margin="0,0,14,0" VerticalAlignment="Center" />
+                <Border Grid.Column="1" Background="#080B10" BorderBrush="#2A475E" BorderThickness="1">
+                    <Image Source="{Binding SelectedGalleryImage}" Stretch="Uniform" />
+                </Border>
+                <Button Grid.Column="2" Content="›" Command="{Binding NextGalleryImageCommand}" Style="{StaticResource SecondaryButton}" FontSize="28" Width="52" Height="64" Margin="14,0,0,0" VerticalAlignment="Center" />
+            </Grid>
+
+            <TextBlock Grid.Row="2" Text="Click × to close · use arrows to browse" Foreground="#8F98A0" HorizontalAlignment="Center" Margin="0,8,0,18" />
+        </Grid>
+    </Grid>
 </UserControl>

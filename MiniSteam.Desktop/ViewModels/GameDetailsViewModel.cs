@@ -29,6 +29,9 @@ public sealed class GameDetailsViewModel : ViewModelBase
     private bool _isOwned;
     private bool _isInWishlist;
     private bool _isInCart;
+    private string? _selectedGalleryImage;
+    private bool _isGalleryOpen;
+    private int _selectedGalleryIndex = -1;
 
     public GameDetailsViewModel(
         GamesService gamesService,
@@ -55,9 +58,14 @@ public sealed class GameDetailsViewModel : ViewModelBase
         DeleteReviewCommand = new AsyncRelayCommand(DeleteReviewAsync, () => MyReview != null && !IsBusyAction);
         VoteHelpfulCommand = new AsyncRelayCommand<ReviewDto>(review => VoteAsync(review, true), review => review != null && !IsBusyAction);
         VoteNotHelpfulCommand = new AsyncRelayCommand<ReviewDto>(review => VoteAsync(review, false), review => review != null && !IsBusyAction);
+        OpenGalleryImageCommand = new RelayCommand<string>(OpenGalleryImage, image => !string.IsNullOrWhiteSpace(image));
+        CloseGalleryCommand = new RelayCommand(CloseGallery);
+        PreviousGalleryImageCommand = new RelayCommand(PreviousGalleryImage);
+        NextGalleryImageCommand = new RelayCommand(NextGalleryImage);
     }
 
     public ObservableCollection<ReviewDto> Reviews { get; } = new();
+    public ObservableCollection<string> GalleryImages { get; } = new();
 
     public GameDto? Game
     {
@@ -66,6 +74,7 @@ public sealed class GameDetailsViewModel : ViewModelBase
         {
             if (SetProperty(ref _game, value))
             {
+                RebuildGallery(value);
                 OpenTrailerCommand.RaiseCanExecuteChanged();
                 RaiseCommerceStateChanged();
             }
@@ -181,6 +190,29 @@ public sealed class GameDetailsViewModel : ViewModelBase
         }
     }
 
+    public string? SelectedGalleryImage
+    {
+        get => _selectedGalleryImage;
+        private set
+        {
+            if (SetProperty(ref _selectedGalleryImage, value))
+            {
+                OnPropertyChanged(nameof(GalleryCounterText));
+            }
+        }
+    }
+
+    public bool IsGalleryOpen
+    {
+        get => _isGalleryOpen;
+        private set => SetProperty(ref _isGalleryOpen, value);
+    }
+
+    public string GalleryCounterText =>
+        _selectedGalleryIndex >= 0 && GalleryImages.Count > 0
+            ? $"{_selectedGalleryIndex + 1} / {GalleryImages.Count}"
+            : string.Empty;
+
     public string StatusMessage
     {
         get => _statusMessage;
@@ -236,6 +268,10 @@ public sealed class GameDetailsViewModel : ViewModelBase
     public AsyncRelayCommand DeleteReviewCommand { get; }
     public AsyncRelayCommand<ReviewDto> VoteHelpfulCommand { get; }
     public AsyncRelayCommand<ReviewDto> VoteNotHelpfulCommand { get; }
+    public RelayCommand<string> OpenGalleryImageCommand { get; }
+    public RelayCommand CloseGalleryCommand { get; }
+    public RelayCommand PreviousGalleryImageCommand { get; }
+    public RelayCommand NextGalleryImageCommand { get; }
 
     public async Task LoadAsync()
     {
@@ -498,6 +534,117 @@ public sealed class GameDetailsViewModel : ViewModelBase
         {
             Reviews.Add(review);
         }
+    }
+
+    private void RebuildGallery(GameDto? game)
+    {
+        GalleryImages.Clear();
+        _selectedGalleryIndex = -1;
+        SelectedGalleryImage = null;
+        IsGalleryOpen = false;
+
+        if (game == null)
+        {
+            OnPropertyChanged(nameof(GalleryCounterText));
+            return;
+        }
+
+        AddGalleryImage(game.ImageUrl);
+        foreach (var screenshot in game.Screenshots)
+        {
+            AddGalleryImage(screenshot);
+        }
+
+        if (GalleryImages.Count > 0)
+        {
+            _selectedGalleryIndex = 0;
+            SelectedGalleryImage = GalleryImages[0];
+        }
+
+        OnPropertyChanged(nameof(GalleryCounterText));
+    }
+
+    private void AddGalleryImage(string? image)
+    {
+        if (string.IsNullOrWhiteSpace(image))
+        {
+            return;
+        }
+
+        if (GalleryImages.Any(existing => string.Equals(existing, image, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        GalleryImages.Add(image);
+    }
+
+    private void OpenGalleryImage(string? image)
+    {
+        if (string.IsNullOrWhiteSpace(image))
+        {
+            return;
+        }
+
+        var index = -1;
+        for (var i = 0; i < GalleryImages.Count; i++)
+        {
+            if (string.Equals(GalleryImages[i], image, StringComparison.OrdinalIgnoreCase))
+            {
+                index = i;
+                break;
+            }
+        }
+
+        if (index < 0)
+        {
+            GalleryImages.Add(image);
+            index = GalleryImages.Count - 1;
+        }
+
+        _selectedGalleryIndex = index;
+        SelectedGalleryImage = GalleryImages[index];
+        IsGalleryOpen = true;
+        OnPropertyChanged(nameof(GalleryCounterText));
+    }
+
+    private void CloseGallery()
+    {
+        IsGalleryOpen = false;
+    }
+
+    private void PreviousGalleryImage()
+    {
+        if (!IsGalleryOpen || GalleryImages.Count == 0)
+        {
+            return;
+        }
+
+        _selectedGalleryIndex--;
+        if (_selectedGalleryIndex < 0)
+        {
+            _selectedGalleryIndex = GalleryImages.Count - 1;
+        }
+
+        SelectedGalleryImage = GalleryImages[_selectedGalleryIndex];
+        OnPropertyChanged(nameof(GalleryCounterText));
+    }
+
+    private void NextGalleryImage()
+    {
+        if (!IsGalleryOpen || GalleryImages.Count == 0)
+        {
+            return;
+        }
+
+        _selectedGalleryIndex++;
+        if (_selectedGalleryIndex >= GalleryImages.Count)
+        {
+            _selectedGalleryIndex = 0;
+        }
+
+        SelectedGalleryImage = GalleryImages[_selectedGalleryIndex];
+        OnPropertyChanged(nameof(GalleryCounterText));
     }
 
     private bool CanOpenTrailer() =>

@@ -14,15 +14,17 @@ public sealed class ApiClient
 {
     private readonly HttpClient _httpClient;
     private readonly SessionService _session;
+    private readonly SecureSessionStore _sessionStore;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public ApiClient(DesktopSettings settings, SessionService session)
+    public ApiClient(DesktopSettings settings, SessionService session, SecureSessionStore sessionStore)
     {
         _session = session;
+        _sessionStore = sessionStore;
         _httpClient = new HttpClient
         {
             BaseAddress = new Uri(settings.Api.BaseUrl, UriKind.Absolute),
@@ -193,7 +195,7 @@ public sealed class ApiClient
 
     public async Task<bool> EnsureValidAccessTokenAsync(CancellationToken cancellationToken = default)
     {
-        if (!_session.IsAuthenticated)
+        if (!_session.HasRefreshToken)
         {
             return false;
         }
@@ -281,7 +283,7 @@ public sealed class ApiClient
         if (string.IsNullOrWhiteSpace(refreshTokenBeforeLock) ||
             _session.RefreshTokenExpiresAt <= DateTime.UtcNow)
         {
-            _session.Clear();
+            ClearSession();
             return false;
         }
 
@@ -306,7 +308,7 @@ public sealed class ApiClient
                     HttpStatusCode.Unauthorized or
                     HttpStatusCode.Forbidden)
                 {
-                    _session.Clear();
+                    ClearSession();
                     return false;
                 }
 
@@ -321,17 +323,34 @@ public sealed class ApiClient
                 string.IsNullOrWhiteSpace(tokenResponse.Token) ||
                 string.IsNullOrWhiteSpace(tokenResponse.RefreshToken))
             {
-                _session.Clear();
+                ClearSession();
                 return false;
             }
 
             _session.Apply(tokenResponse);
+            _sessionStore.Save(_session);
             return true;
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new ApiException(
+                $"MiniSteam API is unavailable at {BaseAddress}. Start the web/backend project and try again.",
+                innerException: ex);
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new ApiException("MiniSteam API did not respond in time.", innerException: ex);
         }
         finally
         {
             _refreshLock.Release();
         }
+    }
+
+    private void ClearSession()
+    {
+        _session.Clear();
+        _sessionStore.Clear();
     }
 
     private async Task<T> ReadSuccessAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)

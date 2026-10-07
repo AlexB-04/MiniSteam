@@ -11,17 +11,33 @@ public sealed class SessionService
     public DateTime RefreshTokenExpiresAt { get; private set; }
     public IReadOnlyList<string> Roles { get; private set; } = Array.Empty<string>();
 
+    public bool HasRefreshToken =>
+        !string.IsNullOrWhiteSpace(RefreshToken) &&
+        RefreshTokenExpiresAt > DateTime.UtcNow;
+
     public bool IsAuthenticated =>
         !string.IsNullOrWhiteSpace(AccessToken) &&
-        !string.IsNullOrWhiteSpace(RefreshToken);
+        HasRefreshToken;
 
     public bool AccessTokenNeedsRefresh =>
-        IsAuthenticated && AccessTokenExpiresAt <= DateTime.UtcNow.AddMinutes(1);
+        HasRefreshToken &&
+        (string.IsNullOrWhiteSpace(AccessToken) ||
+         AccessTokenExpiresAt <= DateTime.UtcNow.AddMinutes(1));
 
     public void Start(string email, TokenResponse response)
     {
         Email = email;
         Apply(response);
+    }
+
+    public void Restore(string email, string refreshToken, DateTime refreshTokenExpiresAt)
+    {
+        Email = email;
+        AccessToken = null;
+        AccessTokenExpiresAt = default;
+        RefreshToken = refreshToken;
+        RefreshTokenExpiresAt = refreshTokenExpiresAt;
+        Roles = Array.Empty<string>();
     }
 
     public void Apply(TokenResponse response)

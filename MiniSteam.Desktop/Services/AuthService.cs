@@ -6,11 +6,13 @@ public sealed class AuthService
 {
     private readonly ApiClient _apiClient;
     private readonly SessionService _session;
+    private readonly SecureSessionStore _sessionStore;
 
-    public AuthService(ApiClient apiClient, SessionService session)
+    public AuthService(ApiClient apiClient, SessionService session, SecureSessionStore sessionStore)
     {
         _apiClient = apiClient;
         _session = session;
+        _sessionStore = sessionStore;
     }
 
     public async Task LoginAsync(string email, string password, CancellationToken cancellationToken = default)
@@ -28,13 +30,40 @@ public sealed class AuthService
             cancellationToken: cancellationToken);
 
         _session.Start(normalizedEmail, response);
+        _sessionStore.Save(_session);
+    }
+
+    public async Task<bool> TryRestoreSessionAsync(CancellationToken cancellationToken = default)
+    {
+        var saved = _sessionStore.TryLoad();
+        if (saved == null)
+        {
+            return false;
+        }
+
+        _session.Restore(saved.Email, saved.RefreshToken, saved.RefreshTokenExpiresAt);
+
+        try
+        {
+            if (await _apiClient.EnsureValidAccessTokenAsync(cancellationToken))
+            {
+                return true;
+            }
+        }
+        catch (ApiException)
+        {
+            // Keep the encrypted refresh token for a later launch if the API is temporarily unavailable.
+        }
+
+        _session.Clear();
+        return false;
     }
 
     public async Task LogoutAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            if (!_session.IsAuthenticated)
+            if (!_session.HasRefreshToken)
             {
                 return;
             }
@@ -62,6 +91,7 @@ public sealed class AuthService
         finally
         {
             _session.Clear();
+            _sessionStore.Clear();
         }
     }
 }

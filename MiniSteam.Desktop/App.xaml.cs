@@ -9,7 +9,7 @@ public partial class App : Application
 {
     public static ServiceRegistry Services { get; private set; } = null!;
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
@@ -18,9 +18,14 @@ public partial class App : Application
             var settings = DesktopSettings.Load();
             Services = new ServiceRegistry(settings);
 
-            var loginWindow = new LoginWindow(Services.AuthService);
-            MainWindow = loginWindow;
-            loginWindow.Show();
+            var restored = await Services.AuthService.TryRestoreSessionAsync();
+
+            Window window = restored
+                ? new MainWindow(Services)
+                : new LoginWindow(Services.AuthService);
+
+            MainWindow = window;
+            window.Show();
         }
         catch (Exception ex)
         {

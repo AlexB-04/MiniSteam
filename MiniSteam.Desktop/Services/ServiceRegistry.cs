@@ -6,9 +6,10 @@ public sealed class ServiceRegistry
 {
     public ServiceRegistry(DesktopSettings settings)
     {
+        SessionStore = new SecureSessionStore();
         Session = new SessionService();
-        ApiClient = new ApiClient(settings, Session);
-        AuthService = new AuthService(ApiClient, Session);
+        ApiClient = new ApiClient(settings, Session, SessionStore);
+        AuthService = new AuthService(ApiClient, Session, SessionStore);
         GamesService = new GamesService(ApiClient);
         LibraryService = new LibraryService(ApiClient);
         WishlistService = new WishlistService(ApiClient);
@@ -17,6 +18,7 @@ public sealed class ServiceRegistry
         InstallationService = new InstallationService(ApiClient, settings);
     }
 
+    public SecureSessionStore SessionStore { get; }
     public SessionService Session { get; }
     public ApiClient ApiClient { get; }
     public AuthService AuthService { get; }

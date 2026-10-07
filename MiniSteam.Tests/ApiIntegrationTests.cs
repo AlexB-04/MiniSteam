@@ -517,6 +517,8 @@ public class ApiIntegrationTests : IClassFixture<TestWebApplicationFactory>
             Assert.Equal(gameId, build!.GameId);
             Assert.Equal("1.0.0", build.Version);
             Assert.Equal("TestGame.exe", build.ExecutablePath);
+            Assert.Equal(1, build.ArchiveFileCount);
+            Assert.Equal(4, build.UncompressedSizeBytes);
 
             using var downloadResponse = await client.GetAsync(
                 $"/api/games/{gameId}/build/download",

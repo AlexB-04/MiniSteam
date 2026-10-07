@@ -6,6 +6,8 @@ public sealed class GameBuildDto
     public string GameName { get; set; } = string.Empty;
     public string Version { get; set; } = string.Empty;
     public long FileSizeBytes { get; set; }
+    public int ArchiveFileCount { get; set; }
+    public long UncompressedSizeBytes { get; set; }
     public string ExecutablePath { get; set; } = string.Empty;
     public string DownloadUrl { get; set; } = string.Empty;
     public DateTime UpdatedAt { get; set; }
@@ -41,6 +43,13 @@ public sealed class InstalledGameRecord
     public string InstallDirectory { get; set; } = string.Empty;
     public string ExecutablePath { get; set; } = string.Empty;
     public DateTime InstalledAt { get; set; }
+    public List<InstalledGameFileRecord> Files { get; set; } = new();
+}
+
+public sealed class InstalledGameFileRecord
+{
+    public string RelativePath { get; set; } = string.Empty;
+    public long Length { get; set; }
 }
 
 public sealed class DownloadProgress

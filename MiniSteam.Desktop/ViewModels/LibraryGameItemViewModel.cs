@@ -109,10 +109,12 @@ public sealed class LibraryGameItemViewModel : ViewModelBase
         LauncherGameState.NoBuild => "No downloadable build published",
         LauncherGameState.NotInstalled => Build == null
             ? "Not installed"
-            : $"Build {Build.Version} · {Build.FileSizeText}",
-        LauncherGameState.Installed => $"Installed · v{Installed?.Version}",
-        LauncherGameState.UpdateAvailable => $"Installed v{Installed?.Version} · Update v{Build?.Version}",
-        LauncherGameState.Broken => "Installed files are missing · reinstall required",
+            : $"Build {Build.Version} · {Build.FileSizeText} · {Build.ArchiveFileCount} files",
+        LauncherGameState.Installed => Installed?.Files.Count > 0
+            ? $"Installed · v{Installed.Version} · {Installed.Files.Count} files verified"
+            : $"Installed · v{Installed?.Version}",
+        LauncherGameState.UpdateAvailable => $"Installed v{Installed?.Version} · Update v{Build?.Version} · {Build?.ArchiveFileCount} files",
+        LauncherGameState.Broken => "Build integrity failed · reinstall required",
         _ => string.Empty
     };
 

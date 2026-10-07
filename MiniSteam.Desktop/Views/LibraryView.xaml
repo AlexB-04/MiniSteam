@@ -123,7 +123,7 @@
             <TextBlock Grid.Row="2" Text="{Binding StatusMessage}" Margin="0,14,0,0" />
 
             <Border Grid.Row="3" Margin="0,24,0,0" Background="#171D25" BorderBrush="#2A475E" BorderThickness="1" Padding="16">
-                <TextBlock Text="Launcher prototype: build downloads require ownership (or Admin), ZIP extraction rejects unsafe paths, and installed state is stored locally. Game files are not copied into the database." TextWrapping="Wrap" Foreground="#8F98A0" />
+                <TextBlock Text="Launcher v3.3: full ZIP builds are staged, verified file-by-file, and atomically replaced on install/update. Missing dependencies are detected and offered for reinstall." TextWrapping="Wrap" Foreground="#8F98A0" />
             </Border>
         </Grid>
     </ScrollViewer>

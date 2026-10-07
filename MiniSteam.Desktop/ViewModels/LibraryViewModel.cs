@@ -159,7 +159,7 @@ public sealed class LibraryViewModel : ViewModelBase
             item.Installed = await _installationService.InstallAsync(item.Build, progress);
             item.LauncherState = _installationService.GetLocalState(item.Build, item.Installed);
             item.ProgressPercent = 100;
-            item.LauncherMessage = $"Installed {item.Name} v{item.Installed.Version}.";
+            item.LauncherMessage = $"Installed {item.Name} v{item.Installed.Version} · {item.Installed.Files.Count} build files verified.";
         }
         catch (Exception ex) when (ex is ApiException or InvalidDataException or IOException or UnauthorizedAccessException)
         {

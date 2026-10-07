@@ -8,6 +8,12 @@ namespace MiniSteam.Services
         public long FileSizeBytes { get; set; }
     }
 
+    public sealed class GameBuildArchiveInfo
+    {
+        public int FileCount { get; set; }
+        public long UncompressedSizeBytes { get; set; }
+    }
+
     public interface IGameBuildStorageService
     {
         long MaxArchiveSizeBytes { get; }
@@ -18,6 +24,7 @@ namespace MiniSteam.Services
             CancellationToken cancellationToken = default);
         string? GetArchivePath(string archiveFileName);
         bool ArchiveContainsExecutable(string archiveFileName, string executablePath);
+        GameBuildArchiveInfo? GetArchiveInfo(string archiveFileName);
         void DeleteArchive(string? archiveFileName);
     }
 
@@ -196,6 +203,36 @@ namespace MiniSteam.Services
             catch (InvalidDataException)
             {
                 return false;
+            }
+        }
+
+        public GameBuildArchiveInfo? GetArchiveInfo(string archiveFileName)
+        {
+            var path = GetArchivePath(archiveFileName);
+            if (path == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                using var archive = ZipFile.OpenRead(path);
+
+                var files = archive.Entries
+                    .Where(entry =>
+                        !string.IsNullOrWhiteSpace(entry.FullName) &&
+                        !entry.FullName.Replace('\\', '/').EndsWith('/'))
+                    .ToList();
+
+                return new GameBuildArchiveInfo
+                {
+                    FileCount = files.Count,
+                    UncompressedSizeBytes = files.Sum(entry => entry.Length)
+                };
+            }
+            catch (InvalidDataException)
+            {
+                return null;
             }
         }
 

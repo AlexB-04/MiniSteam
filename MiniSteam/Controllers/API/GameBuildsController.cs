@@ -142,14 +142,18 @@ namespace MiniSteam.Controllers.API
             return await _libraryService.OwnsGameAsync(userId, gameId);
         }
 
-        private static GameBuildDto ToDto(MiniSteam.Models.Entities.GameBuild build)
+        private GameBuildDto ToDto(MiniSteam.Models.Entities.GameBuild build)
         {
+            var archiveInfo = _storage.GetArchiveInfo(build.ArchiveFileName);
+
             return new GameBuildDto
             {
                 GameId = build.GameId,
                 GameName = build.Game.Name,
                 Version = build.Version,
                 FileSizeBytes = build.FileSizeBytes,
+                ArchiveFileCount = archiveInfo?.FileCount ?? 0,
+                UncompressedSizeBytes = archiveInfo?.UncompressedSizeBytes ?? 0,
                 ExecutablePath = build.ExecutablePath,
                 DownloadUrl = $"api/games/{build.GameId}/build/download",
                 UpdatedAt = build.UpdatedAt

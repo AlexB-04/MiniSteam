@@ -61,8 +61,7 @@ public sealed class InstallationService
     {
         if (installed != null)
         {
-            if (!Directory.Exists(installed.InstallDirectory) ||
-                !File.Exists(GetInstalledExecutablePath(installed)))
+            if (!IsInstalledContentHealthy(build, installed))
             {
                 return LauncherGameState.Broken;
             }
@@ -128,7 +127,13 @@ public sealed class InstallationService
             }
 
             Directory.CreateDirectory(stagingDirectory);
-            ExtractArchiveSafely(tempArchive, stagingDirectory, cancellationToken);
+            var extractedFiles = ExtractArchiveSafely(
+                tempArchive,
+                stagingDirectory,
+                cancellationToken);
+
+            ValidateArchiveStatistics(build, extractedFiles);
+            VerifyInstalledFiles(stagingDirectory, extractedFiles);
 
             var stagingExecutable = GetSafeChildPath(stagingDirectory, build.ExecutablePath);
             if (!File.Exists(stagingExecutable))
@@ -158,6 +163,10 @@ public sealed class InstallationService
 
                 Directory.Move(stagingDirectory, finalDirectory);
 
+                // v3.3: never commit an install/update until every file from the ZIP
+                // is present at the final destination with the expected size.
+                VerifyInstalledFiles(finalDirectory, extractedFiles);
+
                 var record = new InstalledGameRecord
                 {
                     GameId = build.GameId,
@@ -165,7 +174,8 @@ public sealed class InstallationService
                     Version = build.Version,
                     InstallDirectory = finalDirectory,
                     ExecutablePath = build.ExecutablePath.Replace('\\', '/'),
-                    InstalledAt = DateTime.UtcNow
+                    InstalledAt = DateTime.UtcNow,
+                    Files = extractedFiles
                 };
 
                 await UpsertRecordAsync(record, cancellationToken);
@@ -340,7 +350,7 @@ public sealed class InstallationService
         _ = GetSafeChildPath(Path.GetTempPath(), build.ExecutablePath);
     }
 
-    private static void ExtractArchiveSafely(
+    private static List<InstalledGameFileRecord> ExtractArchiveSafely(
         string archivePath,
         string destinationDirectory,
         CancellationToken cancellationToken)
@@ -350,6 +360,8 @@ public sealed class InstallationService
             + Path.DirectorySeparatorChar;
 
         long extractedBytes = 0;
+        var extractedFiles = new List<InstalledGameFileRecord>();
+        var extractedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         using var archive = ZipFile.OpenRead(archivePath);
 
@@ -357,24 +369,21 @@ public sealed class InstallationService
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            extractedBytes += entry.Length;
-            if (extractedBytes > MaxExtractedBytes)
-            {
-                throw new InvalidDataException("The build expands beyond MiniSteam's 8 GB prototype safety limit.");
-            }
-
-            var normalizedEntryName = entry.FullName.Replace('\\', '/');
+            var normalizedEntryName = entry.FullName.Replace('\\', '/').TrimStart('/');
             if (string.IsNullOrWhiteSpace(normalizedEntryName))
             {
                 continue;
             }
 
             var targetPath = Path.GetFullPath(
-                Path.Combine(destinationRoot, normalizedEntryName.Replace('/', Path.DirectorySeparatorChar)));
+                Path.Combine(
+                    destinationRoot,
+                    normalizedEntryName.Replace('/', Path.DirectorySeparatorChar)));
 
             if (!targetPath.StartsWith(destinationRoot, StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidDataException("The build archive contains an unsafe path and was rejected.");
+                throw new InvalidDataException(
+                    "The build archive contains an unsafe path and was rejected.");
             }
 
             if (normalizedEntryName.EndsWith('/'))
@@ -383,13 +392,162 @@ public sealed class InstallationService
                 continue;
             }
 
+            if (!extractedPaths.Add(normalizedEntryName))
+            {
+                throw new InvalidDataException(
+                    $"The build archive contains the same file path more than once: '{normalizedEntryName}'.");
+            }
+
+            extractedBytes += entry.Length;
+            if (extractedBytes > MaxExtractedBytes)
+            {
+                throw new InvalidDataException(
+                    "The build expands beyond MiniSteam's 8 GB prototype safety limit.");
+            }
+
             var targetDirectory = Path.GetDirectoryName(targetPath);
             if (!string.IsNullOrWhiteSpace(targetDirectory))
             {
                 Directory.CreateDirectory(targetDirectory);
             }
 
-            entry.ExtractToFile(targetPath, overwrite: true);
+            entry.ExtractToFile(targetPath, overwrite: false);
+
+            var extractedFile = new FileInfo(targetPath);
+            if (!extractedFile.Exists || extractedFile.Length != entry.Length)
+            {
+                throw new InvalidDataException(
+                    $"The extracted file '{normalizedEntryName}' did not match the ZIP entry size.");
+            }
+
+            extractedFiles.Add(new InstalledGameFileRecord
+            {
+                RelativePath = normalizedEntryName,
+                Length = entry.Length
+            });
+        }
+
+        if (extractedFiles.Count == 0)
+        {
+            throw new InvalidDataException("The build archive does not contain any files.");
+        }
+
+        return extractedFiles;
+    }
+
+    private static void ValidateArchiveStatistics(
+        GameBuildDto build,
+        IReadOnlyCollection<InstalledGameFileRecord> extractedFiles)
+    {
+        if (build.ArchiveFileCount > 0 &&
+            extractedFiles.Count != build.ArchiveFileCount)
+        {
+            throw new InvalidDataException(
+                $"Extracted file count does not match the server metadata. Expected {build.ArchiveFileCount}, received {extractedFiles.Count}.");
+        }
+
+        var extractedBytes = extractedFiles.Sum(file => file.Length);
+        if (build.UncompressedSizeBytes > 0 &&
+            extractedBytes != build.UncompressedSizeBytes)
+        {
+            throw new InvalidDataException(
+                $"Extracted build size does not match the server metadata. Expected {build.UncompressedSizeBytes} bytes, received {extractedBytes} bytes.");
+        }
+    }
+
+    private static void VerifyInstalledFiles(
+        string rootDirectory,
+        IReadOnlyCollection<InstalledGameFileRecord> files)
+    {
+        foreach (var file in files)
+        {
+            var path = GetSafeChildPath(rootDirectory, file.RelativePath);
+
+            if (!File.Exists(path))
+            {
+                throw new InvalidDataException(
+                    $"Installation verification failed because '{file.RelativePath}' is missing.");
+            }
+
+            var actualLength = new FileInfo(path).Length;
+            if (actualLength != file.Length)
+            {
+                throw new InvalidDataException(
+                    $"Installation verification failed because '{file.RelativePath}' has an unexpected size.");
+            }
+        }
+    }
+
+    private static bool IsInstalledContentHealthy(
+        GameBuildDto? build,
+        InstalledGameRecord installed)
+    {
+        try
+        {
+            if (!Directory.Exists(installed.InstallDirectory) ||
+                !File.Exists(GetInstalledExecutablePath(installed)))
+            {
+                return false;
+            }
+
+            // Builds installed by v3.3+ record every archive file.
+            // Exact verification catches missing Unity data folders, DLLs,
+            // scripts and other dependencies even when the main .exe survives.
+            if (installed.Files is { Count: > 0 })
+            {
+                foreach (var file in installed.Files)
+                {
+                    var path = GetSafeChildPath(
+                        installed.InstallDirectory,
+                        file.RelativePath);
+
+                    if (!File.Exists(path) ||
+                        new FileInfo(path).Length != file.Length)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            // Legacy v3.2 manifests did not store a file inventory. When the
+            // server exposes archive statistics, use them to detect obviously
+            // incomplete legacy installs and offer REINSTALL.
+            if (build != null)
+            {
+                var installedPaths = Directory.EnumerateFiles(
+                        installed.InstallDirectory,
+                        "*",
+                        SearchOption.AllDirectories)
+                    .ToList();
+
+                if (build.ArchiveFileCount > 0 &&
+                    installedPaths.Count < build.ArchiveFileCount)
+                {
+                    return false;
+                }
+
+                if (build.UncompressedSizeBytes > 0)
+                {
+                    var installedBytes = installedPaths.Sum(
+                        path => new FileInfo(path).Length);
+
+                    if (installedBytes < build.UncompressedSizeBytes)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+        catch (Exception ex) when (
+            ex is IOException or
+            UnauthorizedAccessException or
+            InvalidDataException)
+        {
+            return false;
         }
     }
 

@@ -23,10 +23,13 @@ namespace MiniSteam.Services
                 .Where(purchase => purchase.UserId == userId)
                 .Include(purchase => purchase.PurchaseItems)
                 .ThenInclude(purchaseItem => purchaseItem.Game)
+                .Include(purchase => purchase.Payment)
                 .OrderByDescending(purchase => purchase.PurchasedAt)
                 .ToListAsync();
         }
 
+        // v3.5 keeps the direct route only for free games. Paid games must pass
+        // through Payment -> confirmation -> Purchase -> Ownership.
         public async Task<ServiceResult<Purchase>> BuyGameAsync(
             string userId,
             int gameId,
@@ -50,6 +53,13 @@ namespace MiniSteam.Services
                 return ServiceResult<Purchase>.Fail(
                     ServiceResultStatus.InvalidOperation,
                     "This game is coming soon and cannot be purchased yet.");
+            }
+
+            if (game.FinalPrice > 0m)
+            {
+                return ServiceResult<Purchase>.Fail(
+                    ServiceResultStatus.InvalidOperation,
+                    "Paid games must be purchased through the cart payment flow.");
             }
 
             var alreadyOwned = await _context.LibraryGames
@@ -79,14 +89,14 @@ namespace MiniSteam.Services
             var purchase = new Purchase
             {
                 UserId = userId,
-                TotalPrice = game.FinalPrice
+                TotalPrice = 0m
             };
 
             purchase.PurchaseItems.Add(new PurchaseItem
             {
                 GameId = game.Id,
                 Game = game,
-                Price = game.FinalPrice
+                Price = 0m
             });
 
             _context.LibraryGames.Add(new LibraryGame
@@ -120,106 +130,10 @@ namespace MiniSteam.Services
             await _context.SaveChangesAsync();
 
             _logger.LogInformation(
-                "Direct purchase completed. PurchaseId: {PurchaseId}, UserId: {UserId}, GameId: {GameId}, Total: {TotalPrice}",
+                "Free game claimed. PurchaseId: {PurchaseId}, UserId: {UserId}, GameId: {GameId}",
                 purchase.Id,
                 userId,
-                gameId,
-                purchase.TotalPrice);
-
-            return ServiceResult<Purchase>.Success(purchase);
-        }
-
-        public async Task<ServiceResult<Purchase>> CheckoutCartAsync(
-            string userId,
-            bool isAdmin)
-        {
-            var cartItems = await _context.CartItems
-                .Include(cartItem => cartItem.Game)
-                .Where(cartItem => cartItem.UserId == userId)
-                .ToListAsync();
-
-            if (cartItems.Count == 0)
-            {
-                return ServiceResult<Purchase>.Fail(
-                    ServiceResultStatus.Empty,
-                    "Your cart is empty.");
-            }
-
-            if (!isAdmin && cartItems.Any(cartItem => !cartItem.Game.IsPublic))
-            {
-                return ServiceResult<Purchase>.Fail(
-                    ServiceResultStatus.InvalidOperation,
-                    "One or more games in the cart are no longer available.");
-            }
-
-            if (cartItems.Any(cartItem => !cartItem.Game.IsPurchasable))
-            {
-                return ServiceResult<Purchase>.Fail(
-                    ServiceResultStatus.InvalidOperation,
-                    "One or more games in the cart are coming soon and cannot be purchased yet.");
-            }
-
-            var gameIds = cartItems
-                .Select(cartItem => cartItem.GameId)
-                .ToList();
-
-            var alreadyOwned = await _context.LibraryGames
-                .AnyAsync(libraryGame =>
-                    libraryGame.UserId == userId &&
-                    gameIds.Contains(libraryGame.GameId));
-
-            if (alreadyOwned)
-            {
-                return ServiceResult<Purchase>.Fail(
-                    ServiceResultStatus.AlreadyOwned,
-                    "One or more games in the cart are already in your library.");
-            }
-
-            var purchase = new Purchase
-            {
-                UserId = userId,
-                TotalPrice = cartItems.Sum(cartItem => cartItem.Game.FinalPrice)
-            };
-
-            foreach (var cartItem in cartItems)
-            {
-                purchase.PurchaseItems.Add(new PurchaseItem
-                {
-                    GameId = cartItem.GameId,
-                    Game = cartItem.Game,
-                    Price = cartItem.Game.FinalPrice
-                });
-
-                _context.LibraryGames.Add(new LibraryGame
-                {
-                    UserId = userId,
-                    GameId = cartItem.GameId,
-                    Game = cartItem.Game
-                });
-            }
-
-            var wishlistItems = await _context.WishlistItems
-                .Where(wishlistItem =>
-                    wishlistItem.UserId == userId &&
-                    gameIds.Contains(wishlistItem.GameId))
-                .ToListAsync();
-
-            if (wishlistItems.Count > 0)
-            {
-                _context.WishlistItems.RemoveRange(wishlistItems);
-            }
-
-            _context.Purchases.Add(purchase);
-            _context.CartItems.RemoveRange(cartItems);
-
-            await _context.SaveChangesAsync();
-
-            _logger.LogInformation(
-                "Cart checkout completed. PurchaseId: {PurchaseId}, UserId: {UserId}, ItemCount: {ItemCount}, Total: {TotalPrice}",
-                purchase.Id,
-                userId,
-                purchase.PurchaseItems.Count,
-                purchase.TotalPrice);
+                gameId);
 
             return ServiceResult<Purchase>.Success(purchase);
         }

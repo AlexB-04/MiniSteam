@@ -35,6 +35,7 @@ public partial class MainWindow : Window
     private void ApplyResponsiveLayout()
     {
         var compact = ActualWidth < 900;
+        var veryCompact = ActualWidth < 760;
 
         TopBarGrid.Margin = compact
             ? new Thickness(14, 0, 14, 0)
@@ -46,14 +47,18 @@ public partial class MainWindow : Window
             ? new Thickness(0, 0, 8, 0)
             : new Thickness(0, 0, 24, 0);
 
-        var navPadding = compact
-            ? new Thickness(10, 12, 10, 12)
-            : new Thickness(18, 12, 18, 12);
+        var navPadding = veryCompact
+            ? new Thickness(6, 12, 6, 12)
+            : compact
+                ? new Thickness(10, 12, 10, 12)
+                : new Thickness(18, 12, 18, 12);
 
         StoreNavButton.Padding = navPadding;
         LibraryNavButton.Padding = navPadding;
         WishlistNavButton.Padding = navPadding;
         CartNavButton.Padding = navPadding;
+        PaymentsNavButton.Padding = navPadding;
+        PaymentsNavButton.Content = veryCompact ? "PAY" : "PAYMENTS";
         LogoutButton.Padding = compact
             ? new Thickness(10, 8, 10, 8)
             : new Thickness(14, 8, 14, 8);

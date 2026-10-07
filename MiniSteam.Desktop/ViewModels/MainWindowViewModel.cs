@@ -11,6 +11,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private readonly LibraryViewModel _libraryViewModel;
     private readonly WishlistViewModel _wishlistViewModel;
     private readonly CartViewModel _cartViewModel;
+    private readonly PaymentHistoryViewModel _paymentHistoryViewModel;
     private ViewModelBase _currentViewModel;
 
     public MainWindowViewModel(ServiceRegistry services)
@@ -20,13 +21,15 @@ public sealed class MainWindowViewModel : ViewModelBase
         _storeViewModel = new StoreViewModel(services.GamesService, OpenGameFromStoreAsync);
         _libraryViewModel = new LibraryViewModel(services.LibraryService, services.InstallationService, OpenGameFromLibraryAsync);
         _wishlistViewModel = new WishlistViewModel(services.WishlistService, services.CartService, OpenGameFromWishlistAsync);
-        _cartViewModel = new CartViewModel(services.CartService, OpenGameFromCartAsync);
+        _cartViewModel = new CartViewModel(services.CartService, services.PaymentService, OpenGameFromCartAsync);
+        _paymentHistoryViewModel = new PaymentHistoryViewModel(services.PaymentService);
         _currentViewModel = _storeViewModel;
 
         StoreCommand = new AsyncRelayCommand(ShowStoreAsync);
         LibraryCommand = new AsyncRelayCommand(ShowLibraryAsync);
         WishlistCommand = new AsyncRelayCommand(ShowWishlistAsync);
         CartCommand = new AsyncRelayCommand(ShowCartAsync);
+        PaymentsCommand = new AsyncRelayCommand(ShowPaymentsAsync);
         LogoutCommand = new AsyncRelayCommand(LogoutAsync);
     }
 
@@ -52,6 +55,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public AsyncRelayCommand LibraryCommand { get; }
     public AsyncRelayCommand WishlistCommand { get; }
     public AsyncRelayCommand CartCommand { get; }
+    public AsyncRelayCommand PaymentsCommand { get; }
     public AsyncRelayCommand LogoutCommand { get; }
 
     public async Task InitializeAsync()
@@ -87,6 +91,12 @@ public sealed class MainWindowViewModel : ViewModelBase
         await _cartViewModel.LoadAsync();
     }
 
+    private async Task ShowPaymentsAsync()
+    {
+        CurrentViewModel = _paymentHistoryViewModel;
+        await _paymentHistoryViewModel.LoadAsync();
+    }
+
     private Task OpenGameFromStoreAsync(GameDto game) =>
         OpenGameAsync(game.Id, ReturnToStoreAsync);
 
@@ -113,7 +123,6 @@ public sealed class MainWindowViewModel : ViewModelBase
         CurrentViewModel = details;
         await details.LoadAsync();
     }
-
 
     private Task ReturnToStoreAsync()
     {

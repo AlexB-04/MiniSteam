@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using MiniSteam.Configuration;
 using MiniSteam.Data;
 using MiniSteam.Helpers;
 using MiniSteam.Middleware;
@@ -230,6 +231,9 @@ namespace MiniSteam
                 });
             });
 
+            builder.Services.Configure<CommerceOptions>(
+                builder.Configuration.GetSection(CommerceOptions.SectionName));
+
             builder.Services.AddHealthChecks()
                 .AddCheck<DatabaseHealthCheck>(
                     "database",
@@ -241,6 +245,8 @@ namespace MiniSteam
             builder.Services.AddScoped<IWishlistService, WishlistService>();
             builder.Services.AddScoped<ICartService, CartService>();
             builder.Services.AddScoped<IPurchaseService, PurchaseService>();
+            builder.Services.AddScoped<IPaymentService, PaymentService>();
+            builder.Services.AddScoped<ISandboxPaymentProvider, SandboxPaymentProvider>();
             builder.Services.AddScoped<IReviewService, ReviewService>();
             builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
             builder.Services.AddSingleton<IGameBuildStorageService, GameBuildStorageService>();

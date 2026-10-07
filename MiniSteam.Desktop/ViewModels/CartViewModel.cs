@@ -8,20 +8,28 @@ namespace MiniSteam.Desktop.ViewModels;
 public sealed class CartViewModel : ViewModelBase
 {
     private readonly CartService _cartService;
+    private readonly PaymentService _paymentService;
     private readonly Func<int, Task> _openGame;
     private string _statusMessage = string.Empty;
     private bool _isBusy;
     private decimal _totalPrice;
+    private PaymentDto? _payment;
 
-    public CartViewModel(CartService cartService, Func<int, Task> openGame)
+    public CartViewModel(
+        CartService cartService,
+        PaymentService paymentService,
+        Func<int, Task> openGame)
     {
         _cartService = cartService;
+        _paymentService = paymentService;
         _openGame = openGame;
 
         RefreshCommand = new AsyncRelayCommand(LoadAsync, () => !IsBusy);
         OpenGameCommand = new AsyncRelayCommand<CartItemDto>(OpenGameAsync, item => item != null && !IsBusy);
-        RemoveCommand = new AsyncRelayCommand<CartItemDto>(RemoveAsync, item => item != null && !IsBusy);
-        CheckoutCommand = new AsyncRelayCommand(CheckoutAsync, () => Items.Count > 0 && !IsBusy);
+        RemoveCommand = new AsyncRelayCommand<CartItemDto>(RemoveAsync, item => item != null && !IsBusy && !HasPendingPayment);
+        CheckoutCommand = new AsyncRelayCommand(BeginCheckoutAsync, () => Items.Count > 0 && !IsBusy && !HasPendingPayment);
+        ConfirmPaymentCommand = new AsyncRelayCommand(ConfirmPaymentAsync, () => HasPendingPayment && !IsBusy);
+        FailPaymentCommand = new AsyncRelayCommand(FailPaymentAsync, () => HasPendingPayment && !IsBusy);
     }
 
     public ObservableCollection<CartItemDto> Items { get; } = new();
@@ -40,6 +48,52 @@ public sealed class CartViewModel : ViewModelBase
 
     public string TotalPriceText => TotalPrice <= 0 ? "Free" : $"{TotalPrice:0.00} €";
 
+    public PaymentDto? Payment
+    {
+        get => _payment;
+        private set
+        {
+            if (SetProperty(ref _payment, value))
+            {
+                OnPropertyChanged(nameof(HasPayment));
+                OnPropertyChanged(nameof(HasPendingPayment));
+                OnPropertyChanged(nameof(PaymentHeadline));
+                OnPropertyChanged(nameof(PaymentDetail));
+                RaiseCommandStates();
+            }
+        }
+    }
+
+    public bool HasPayment => Payment != null;
+
+    public bool HasPendingPayment =>
+        Payment?.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase) == true;
+
+    public string PaymentHeadline => Payment == null
+        ? string.Empty
+        : $"Payment #{Payment.Id} · {Payment.Status}";
+
+    public string PaymentDetail
+    {
+        get
+        {
+            if (Payment == null)
+            {
+                return string.Empty;
+            }
+
+            var purchaseText = Payment.PurchaseId.HasValue
+                ? $" · Purchase #{Payment.PurchaseId.Value}"
+                : string.Empty;
+
+            var failureText = string.IsNullOrWhiteSpace(Payment.FailureReason)
+                ? string.Empty
+                : $" · {Payment.FailureReason}";
+
+            return $"{Payment.Provider} · {Payment.TotalText}{purchaseText}{failureText}";
+        }
+    }
+
     public string StatusMessage
     {
         get => _statusMessage;
@@ -53,10 +107,7 @@ public sealed class CartViewModel : ViewModelBase
         {
             if (SetProperty(ref _isBusy, value))
             {
-                RefreshCommand.RaiseCanExecuteChanged();
-                OpenGameCommand.RaiseCanExecuteChanged();
-                RemoveCommand.RaiseCanExecuteChanged();
-                CheckoutCommand.RaiseCanExecuteChanged();
+                RaiseCommandStates();
             }
         }
     }
@@ -65,6 +116,8 @@ public sealed class CartViewModel : ViewModelBase
     public AsyncRelayCommand<CartItemDto> OpenGameCommand { get; }
     public AsyncRelayCommand<CartItemDto> RemoveCommand { get; }
     public AsyncRelayCommand CheckoutCommand { get; }
+    public AsyncRelayCommand ConfirmPaymentCommand { get; }
+    public AsyncRelayCommand FailPaymentCommand { get; }
 
     public async Task LoadAsync()
     {
@@ -79,6 +132,7 @@ public sealed class CartViewModel : ViewModelBase
         try
         {
             var cart = await _cartService.GetCartAsync();
+            var pendingPayment = await _paymentService.GetPendingAsync();
 
             Items.Clear();
             foreach (var item in cart.Items)
@@ -87,9 +141,18 @@ public sealed class CartViewModel : ViewModelBase
             }
 
             TotalPrice = cart.TotalPrice;
-            StatusMessage = Items.Count == 0
-                ? "Your cart is empty."
-                : $"{Items.Count} game{(Items.Count == 1 ? string.Empty : "s")} ready for checkout";
+            Payment = pendingPayment;
+
+            if (pendingPayment != null)
+            {
+                StatusMessage = $"Sandbox payment #{pendingPayment.Id} is waiting for confirmation.";
+            }
+            else
+            {
+                StatusMessage = Items.Count == 0
+                    ? "Your cart is empty."
+                    : $"{Items.Count} game{(Items.Count == 1 ? string.Empty : "s")} ready for checkout";
+            }
         }
         catch (ApiException ex)
         {
@@ -98,7 +161,7 @@ public sealed class CartViewModel : ViewModelBase
         finally
         {
             IsBusy = false;
-            CheckoutCommand.RaiseCanExecuteChanged();
+            RaiseCommandStates();
         }
     }
 
@@ -112,7 +175,7 @@ public sealed class CartViewModel : ViewModelBase
 
     private async Task RemoveAsync(CartItemDto? item)
     {
-        if (item == null)
+        if (item == null || HasPendingPayment)
         {
             return;
         }
@@ -134,26 +197,24 @@ public sealed class CartViewModel : ViewModelBase
         finally
         {
             IsBusy = false;
-            CheckoutCommand.RaiseCanExecuteChanged();
+            RaiseCommandStates();
         }
     }
 
-    private async Task CheckoutAsync()
+    private async Task BeginCheckoutAsync()
     {
-        if (Items.Count == 0)
+        if (Items.Count == 0 || HasPendingPayment)
         {
             return;
         }
 
         IsBusy = true;
-        StatusMessage = "Completing checkout...";
+        StatusMessage = "Creating sandbox payment...";
 
         try
         {
-            var purchase = await _cartService.CheckoutAsync();
-            Items.Clear();
-            TotalPrice = 0;
-            StatusMessage = $"Purchase #{purchase.Id} completed · {purchase.Items.Count} game{(purchase.Items.Count == 1 ? string.Empty : "s")} · {purchase.TotalPriceText}.";
+            Payment = await _paymentService.CreateCheckoutAsync();
+            StatusMessage = $"Payment #{Payment.Id} created. Confirm or deliberately decline the sandbox payment.";
         }
         catch (ApiException ex)
         {
@@ -162,7 +223,84 @@ public sealed class CartViewModel : ViewModelBase
         finally
         {
             IsBusy = false;
-            CheckoutCommand.RaiseCanExecuteChanged();
+            RaiseCommandStates();
         }
+    }
+
+    private async Task ConfirmPaymentAsync()
+    {
+        if (!HasPendingPayment || Payment == null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        StatusMessage = $"Confirming payment #{Payment.Id}...";
+
+        try
+        {
+            Payment = await _paymentService.ConfirmSandboxAsync(Payment.Id);
+            Items.Clear();
+            TotalPrice = 0m;
+            StatusMessage = $"Payment #{Payment.Id} succeeded · Purchase #{Payment.PurchaseId} created · ownership granted.";
+        }
+        catch (ApiException ex)
+        {
+            StatusMessage = ex.Message;
+            await TryReloadPaymentAsync(Payment.Id);
+        }
+        finally
+        {
+            IsBusy = false;
+            RaiseCommandStates();
+        }
+    }
+
+    private async Task FailPaymentAsync()
+    {
+        if (!HasPendingPayment || Payment == null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        StatusMessage = $"Declining payment #{Payment.Id}...";
+
+        try
+        {
+            Payment = await _paymentService.FailSandboxAsync(Payment.Id);
+            StatusMessage = "Sandbox payment declined. Cart remains unchanged so checkout can be tried again.";
+        }
+        catch (ApiException ex)
+        {
+            StatusMessage = ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+            RaiseCommandStates();
+        }
+    }
+
+    private async Task TryReloadPaymentAsync(int paymentId)
+    {
+        try
+        {
+            Payment = await _paymentService.GetAsync(paymentId);
+        }
+        catch
+        {
+            // Preserve the original API error. A refresh can be used to retry loading state.
+        }
+    }
+
+    private void RaiseCommandStates()
+    {
+        RefreshCommand.RaiseCanExecuteChanged();
+        OpenGameCommand.RaiseCanExecuteChanged();
+        RemoveCommand.RaiseCanExecuteChanged();
+        CheckoutCommand.RaiseCanExecuteChanged();
+        ConfirmPaymentCommand.RaiseCanExecuteChanged();
+        FailPaymentCommand.RaiseCanExecuteChanged();
     }
 }

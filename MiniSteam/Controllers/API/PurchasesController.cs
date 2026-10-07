@@ -69,6 +69,12 @@ namespace MiniSteam.Controllers.API
                 Id = purchase.Id,
                 PurchasedAt = purchase.PurchasedAt,
                 TotalPrice = purchase.TotalPrice,
+                PaymentId = purchase.Payment?.Id,
+                PaymentStatus = purchase.Payment?.Status.ToString(),
+                ReceiptNumber = purchase.Payment?.Status is PaymentStatus.Succeeded or PaymentStatus.Refunded
+                    ? $"MS-SBX-{purchase.Payment.Id:00000000}"
+                    : null,
+                IsRefunded = purchase.Payment?.Status == PaymentStatus.Refunded,
                 Items = purchase.PurchaseItems
                     .Select(item => new PurchaseItemDto
                     {

@@ -8,6 +8,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <Grid Grid.Row="0" Margin="0,0,0,24">
@@ -18,7 +19,7 @@
                 <StackPanel>
                     <TextBlock Text="CHECKOUT" Foreground="{StaticResource AccentBrush}" FontSize="11" FontWeight="Bold" />
                     <TextBlock Text="Cart" Foreground="White" FontSize="30" FontWeight="SemiBold" Margin="0,5,0,4" />
-                    <TextBlock Text="Review your games before completing the MiniSteam purchase flow." />
+                    <TextBlock Text="v3.5.1 hardens checkout with payment history, receipts, idempotency and sandbox refunds." TextWrapping="Wrap" />
                 </StackPanel>
                 <Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshCommand}" Style="{StaticResource SecondaryButton}" VerticalAlignment="Center" />
             </Grid>
@@ -89,12 +90,60 @@
                         <TextBlock Text="TOTAL" Foreground="#66C0F4" FontSize="11" FontWeight="Bold" />
                         <TextBlock Text="{Binding TotalPriceText}" Foreground="White" FontSize="24" FontWeight="SemiBold" Margin="0,4,0,0" />
                     </StackPanel>
-                    <TextBlock Grid.Column="1" Text="Educational checkout · no real payment provider" VerticalAlignment="Center" Margin="20,0" />
-                    <Button Grid.Column="2" Content="Checkout" Command="{Binding CheckoutCommand}" Style="{StaticResource PrimaryButton}" MinWidth="130" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="Sandbox checkout · no real payment provider" VerticalAlignment="Center" Margin="20,0" />
+                    <Button Grid.Column="2" Content="Proceed to Payment" Command="{Binding CheckoutCommand}" Style="{StaticResource PrimaryButton}" MinWidth="150" VerticalAlignment="Center" />
                 </Grid>
             </Border>
 
-            <TextBlock Grid.Row="3" Text="{Binding StatusMessage}" Margin="0,14,0,0" TextWrapping="Wrap" />
+            <Border Grid.Row="3" Background="#101820" BorderBrush="#66C0F4" BorderThickness="1" Padding="18" Margin="0,14,0,0">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasPayment}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel>
+                        <TextBlock Text="SANDBOX PAYMENT" Foreground="#66C0F4" FontSize="11" FontWeight="Bold" />
+                        <TextBlock Text="{Binding PaymentHeadline}" Foreground="White" FontSize="18" FontWeight="SemiBold" Margin="0,5,0,3" />
+                        <TextBlock Text="{Binding PaymentDetail}" TextWrapping="Wrap" />
+                        <TextBlock Text="No card number, CVV, or bank credential is collected or stored." Foreground="#8F98A0" FontSize="11" Margin="0,8,0,0" />
+                    </StackPanel>
+
+                    <WrapPanel Grid.Row="1" Margin="0,14,0,0">
+                        <WrapPanel.Style>
+                            <Style TargetType="WrapPanel">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasPendingPayment}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </WrapPanel.Style>
+                        <Button Content="SIMULATE DECLINE"
+                                Command="{Binding FailPaymentCommand}"
+                                Style="{StaticResource SecondaryButton}"
+                                Margin="0,0,8,8" />
+                        <Button Content="CONFIRM PAYMENT"
+                                Command="{Binding ConfirmPaymentCommand}"
+                                Style="{StaticResource PrimaryButton}"
+                                Margin="0,0,0,8" />
+                    </WrapPanel>
+                </Grid>
+            </Border>
+
+            <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" Margin="0,14,0,0" TextWrapping="Wrap" />
         </Grid>
     </ScrollViewer>
 </UserControl>

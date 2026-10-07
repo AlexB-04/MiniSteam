@@ -61,6 +61,13 @@ namespace MiniSteam.Services
             int gameId,
             bool isAdmin)
         {
+            if (await HasPendingPaymentAsync(userId))
+            {
+                return ServiceResult<CartItem>.Fail(
+                    ServiceResultStatus.Conflict,
+                    "Finish or decline the pending payment before changing the cart.");
+            }
+
             var game = await _context.Games
                 .Include(game => game.Genre)
                 .FirstOrDefaultAsync(game => game.Id == gameId);
@@ -118,6 +125,13 @@ namespace MiniSteam.Services
 
         public async Task<ServiceResult<bool>> RemoveAsync(string userId, int gameId)
         {
+            if (await HasPendingPaymentAsync(userId))
+            {
+                return ServiceResult<bool>.Fail(
+                    ServiceResultStatus.Conflict,
+                    "Finish or decline the pending payment before changing the cart.");
+            }
+
             var cartItem = await _context.CartItems
                 .FirstOrDefaultAsync(item =>
                     item.UserId == userId &&
@@ -132,6 +146,13 @@ namespace MiniSteam.Services
             await _context.SaveChangesAsync();
 
             return ServiceResult<bool>.Success(true);
+        }
+
+        private Task<bool> HasPendingPaymentAsync(string userId)
+        {
+            return _context.Payments.AnyAsync(payment =>
+                payment.UserId == userId &&
+                payment.Status == PaymentStatus.Pending);
         }
     }
 }

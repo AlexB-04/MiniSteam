@@ -1,0 +1,167 @@
+@model MiniSteam.Models.ViewModels.PaymentDetailsViewModel
+
+@{
+    ViewData["Title"] = $"Payment #{Model.Id}";
+}
+
+<div class="cart-page">
+    @if (TempData["PaymentMessage"] != null)
+    {
+        <div class="wishlist-status-message">@TempData["PaymentMessage"]</div>
+    }
+
+    <div class="cart-header">
+        <div>
+            <span class="cart-eyebrow">MINISTEAM SANDBOX COMMERCE</span>
+            <h1>Payment #@Model.Id</h1>
+            <p>v3.5.1 payment record, receipt snapshot and refund state.</p>
+        </div>
+
+        <div class="cart-header-actions">
+            <a asp-action="Index" class="cart-store-button">Payment History</a>
+            <a asp-controller="Cart" asp-action="Index" class="cart-store-button">Back to Cart</a>
+        </div>
+    </div>
+
+    <div class="cart-layout">
+        <section class="cart-items-panel">
+            <div class="cart-section-header">
+                <div>
+                    <span class="cart-section-eyebrow">PAYMENT ITEMS</span>
+                    <h2>Checkout snapshot</h2>
+                </div>
+                <span class="cart-section-count">@Model.Items.Count @(Model.Items.Count == 1 ? "item" : "items")</span>
+            </div>
+
+            <div class="cart-list">
+                @foreach (var item in Model.Items)
+                {
+                    <article class="cart-row">
+                        <a asp-controller="Games" asp-action="Details" asp-route-id="@item.GameId" class="cart-game-main">
+                            <div class="cart-game-info">
+                                <h3>@item.GameName</h3>
+                                @if (item.HasDiscountSnapshot)
+                                {
+                                    <span>
+                                        Price snapshot: <s>@item.OriginalPrice.Value.ToString("0.00") @Model.Currency</s>
+                                        · -@item.DiscountPercent%
+                                    </span>
+                                }
+                                else if (item.OriginalPrice.HasValue)
+                                {
+                                    <span>Original price snapshot: @item.OriginalPrice.Value.ToString("0.00") @Model.Currency</span>
+                                }
+                                else
+                                {
+                                    <span>Legacy v3.5 item: final price snapshot only</span>
+                                }
+                            </div>
+                        </a>
+                        <div class="cart-game-side">
+                            <strong>@item.Price.ToString("0.00") @Model.Currency</strong>
+                        </div>
+                    </article>
+                }
+            </div>
+        </section>
+
+        <aside class="cart-summary">
+            <span class="cart-summary-eyebrow">PAYMENT STATE</span>
+            <h2>@Model.Status</h2>
+
+            @if (!string.IsNullOrWhiteSpace(Model.ReceiptNumber))
+            {
+                <div class="cart-summary-line">
+                    <span>Receipt</span>
+                    <strong>@Model.ReceiptNumber</strong>
+                </div>
+            }
+
+            <div class="cart-summary-line">
+                <span>Provider</span>
+                <strong>@Model.Provider</strong>
+            </div>
+            <div class="cart-summary-line">
+                <span>Reference</span>
+                <strong style="word-break:break-all; text-align:right;">@Model.ProviderReference</strong>
+            </div>
+            <div class="cart-summary-line">
+                <span>Created</span>
+                <strong>@Model.CreatedAt.ToString("dd MMM yyyy · HH:mm")</strong>
+            </div>
+            <div class="cart-summary-line">
+                <span>Subtotal</span>
+                <strong>@Model.Subtotal.ToString("0.00") @Model.Currency</strong>
+            </div>
+            <div class="cart-summary-line">
+                <span>Tax rate snapshot</span>
+                <strong>@Model.TaxRateText</strong>
+            </div>
+            <div class="cart-summary-line">
+                <span>Tax amount</span>
+                <strong>@Model.TaxAmount.ToString("0.00") @Model.Currency</strong>
+            </div>
+            <div class="cart-summary-line cart-summary-total">
+                <span>Total</span>
+                <strong>@Model.Total.ToString("0.00") @Model.Currency</strong>
+            </div>
+
+            @if (Model.IsPending)
+            {
+                <form asp-action="Confirm" asp-route-id="@Model.Id" method="post" style="margin-top:16px;">
+                    <button type="submit" class="cart-checkout-button">Simulate successful payment</button>
+                </form>
+
+                <form asp-action="Fail" asp-route-id="@Model.Id" method="post" style="margin-top:10px;">
+                    <button type="submit" class="cart-remove-button" style="width:100%;">Simulate declined payment</button>
+                </form>
+            }
+            else if (Model.IsSucceeded)
+            {
+                <div class="cart-unavailable-notice" style="margin-top:16px;">
+                    Payment confirmed. Purchase #@Model.PurchaseId created and ownership granted.
+                </div>
+
+                <form asp-action="Refund" asp-route-id="@Model.Id" method="post" style="margin-top:12px;">
+                    <input type="hidden" name="reason" value="Sandbox refund requested from payment details." />
+                    <button type="submit" class="cart-remove-button" style="width:100%;">Simulate full refund</button>
+                </form>
+
+                <a asp-controller="Library" asp-action="Index" class="cart-checkout-button" style="display:block; text-align:center; margin-top:12px;">Open Library</a>
+            }
+            else if (Model.IsFailed)
+            {
+                <div class="cart-unavailable-notice" style="margin-top:16px;">
+                    @Model.FailureReason
+                </div>
+                <a asp-controller="Cart" asp-action="Index" class="cart-checkout-button" style="display:block; text-align:center; margin-top:12px;">Try checkout again</a>
+            }
+            else if (Model.IsRefunded)
+            {
+                <div class="cart-unavailable-notice" style="margin-top:16px;">
+                    Refunded @Model.RefundAmount?.ToString("0.00") @Model.Currency
+                    @if (Model.RefundedAt.HasValue)
+                    {
+                        <text> on @Model.RefundedAt.Value.ToString("dd MMM yyyy · HH:mm")</text>
+                    }
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.RefundReference))
+                {
+                    <div class="cart-summary-line" style="margin-top:12px;">
+                        <span>Refund ref.</span>
+                        <strong style="word-break:break-all; text-align:right;">@Model.RefundReference</strong>
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.RefundReason))
+                {
+                    <p class="cart-summary-note">@Model.RefundReason</p>
+                }
+                <a asp-controller="Games" asp-action="Store" class="cart-checkout-button" style="display:block; text-align:center; margin-top:12px;">Return to Store</a>
+            }
+
+            <p class="cart-summary-note">
+                Sandbox only. MiniSteam does not store card numbers, CVV, or bank credentials.
+            </p>
+        </aside>
+    </div>
+</div>

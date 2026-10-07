@@ -1,4 +1,4 @@
-﻿@model IEnumerable<MiniSteam.Models.Entities.Purchase>
+@model IEnumerable<MiniSteam.Models.Entities.Purchase>
 
 @{
     ViewData["Title"] = "Purchase History";
@@ -7,7 +7,9 @@
         .OrderByDescending(purchase => purchase.PurchasedAt)
         .ToList();
 
-    var totalSpent = purchases.Sum(purchase => purchase.TotalPrice);
+    var totalSpent = purchases
+        .Where(purchase => purchase.Payment?.Status != MiniSteam.Models.Entities.PaymentStatus.Refunded)
+        .Sum(purchase => purchase.TotalPrice);
     var totalGames = purchases.Sum(purchase => purchase.PurchaseItems.Count);
 }
 
@@ -134,7 +136,7 @@
 
                                 <div>
                                     <span class="purchase-transaction-label">
-                                        PURCHASE
+                                        @(purchase.Payment?.Status == MiniSteam.Models.Entities.PaymentStatus.Refunded ? "REFUNDED PURCHASE" : "PURCHASE")
                                     </span>
 
                                     <strong>
@@ -153,7 +155,12 @@
 
                                 <span>Total</span>
 
-                                @if (purchase.TotalPrice == 0)
+                                @if (purchase.Payment?.Status == MiniSteam.Models.Entities.PaymentStatus.Refunded)
+                                {
+                                    <strong class="purchase-free">Refunded</strong>
+                                    <small>@purchase.TotalPrice.ToString("0.00") € historical</small>
+                                }
+                                else if (purchase.TotalPrice == 0)
                                 {
                                     <strong class="purchase-free">
                                         Free
@@ -249,7 +256,14 @@
                             </span>
 
                             <span>
-                                Purchased @purchase.PurchasedAt.ToString("dd MMM yyyy")
+                                @if (purchase.Payment?.Status == MiniSteam.Models.Entities.PaymentStatus.Refunded)
+                                {
+                                    <text>Refunded @purchase.Payment.RefundedAt?.ToString("dd MMM yyyy")</text>
+                                }
+                                else
+                                {
+                                    <text>Purchased @purchase.PurchasedAt.ToString("dd MMM yyyy")</text>
+                                }
                             </span>
 
                         </div>

@@ -11,16 +11,16 @@ namespace MiniSteam.Controllers
     public class CartController : Controller
     {
         private readonly ICartService _cartService;
-        private readonly IPurchaseService _purchaseService;
+        private readonly IPaymentService _paymentService;
         private readonly UserManager<User> _userManager;
 
         public CartController(
             ICartService cartService,
-            IPurchaseService purchaseService,
+            IPaymentService paymentService,
             UserManager<User> userManager)
         {
             _cartService = cartService;
-            _purchaseService = purchaseService;
+            _paymentService = paymentService;
             _userManager = userManager;
         }
 
@@ -50,10 +50,13 @@ namespace MiniSteam.Controllers
                 })
                 .ToList();
 
+            var pendingPayment = await _paymentService.GetPendingAsync(user.Id);
+
             var model = new CartViewModel
             {
                 Items = items,
-                TotalPrice = items.Sum(item => item.Price)
+                TotalPrice = items.Sum(item => item.Price),
+                PendingPaymentId = pendingPayment?.Id
             };
 
             return View(model);
@@ -125,6 +128,11 @@ namespace MiniSteam.Controllers
                 return NotFound();
             }
 
+            if (!result.Succeeded)
+            {
+                TempData["CartMessage"] = result.Message ?? "Unable to change the cart.";
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
@@ -139,7 +147,7 @@ namespace MiniSteam.Controllers
                 return Unauthorized();
             }
 
-            var result = await _purchaseService.CheckoutCartAsync(
+            var result = await _paymentService.CreateCartPaymentAsync(
                 user.Id,
                 User.IsInRole("Admin"));
 
@@ -148,15 +156,18 @@ namespace MiniSteam.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            if (!result.Succeeded)
+            if (!result.Succeeded || result.Value == null)
             {
                 TempData["CartMessage"] =
-                    result.Message ?? "Checkout could not be completed.";
+                    result.Message ?? "Checkout could not start.";
 
                 return RedirectToAction(nameof(Index));
             }
 
-            return RedirectToAction("Index", "Library");
+            return RedirectToAction(
+                "Details",
+                "Payment",
+                new { id = result.Value.Id });
         }
     }
 }

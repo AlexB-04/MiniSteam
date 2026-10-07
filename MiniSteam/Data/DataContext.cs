@@ -36,6 +36,12 @@ namespace MiniSteam.Data
 
         public DbSet<GameBuild> GameBuilds { get; set; }
 
+        public DbSet<Payment> Payments { get; set; }
+
+        public DbSet<PaymentItem> PaymentItems { get; set; }
+
+        public DbSet<PaymentEvent> PaymentEvents { get; set; }
+
         // Конструктор класса DataContext, который принимает параметры конфигурации DbContextOptions и передает их базовому классу DbContext.
         // Это позволяет настроить контекст базы данных, например, указать строку подключения к базе данных.
         public DataContext(DbContextOptions<DataContext> options) : base(options)
@@ -147,6 +153,115 @@ namespace MiniSteam.Data
                 .WithOne(game => game.Build)
                 .HasForeignKey<GameBuild>(build => build.GameId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Payment>()
+                .Property(payment => payment.Status)
+                .HasConversion<string>()
+                .HasMaxLength(32);
+
+            modelBuilder.Entity<Payment>()
+                .Property(payment => payment.Provider)
+                .HasMaxLength(100);
+
+            modelBuilder.Entity<Payment>()
+                .Property(payment => payment.ProviderReference)
+                .HasMaxLength(160);
+
+            modelBuilder.Entity<Payment>()
+                .Property(payment => payment.Currency)
+                .HasMaxLength(8);
+
+            modelBuilder.Entity<Payment>()
+                .Property(payment => payment.Subtotal)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Payment>()
+                .Property(payment => payment.TaxRate)
+                .HasPrecision(8, 6);
+
+            modelBuilder.Entity<Payment>()
+                .Property(payment => payment.TaxAmount)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Payment>()
+                .Property(payment => payment.Total)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Payment>()
+                .Property(payment => payment.RefundReference)
+                .HasMaxLength(160);
+
+            modelBuilder.Entity<Payment>()
+                .Property(payment => payment.RefundReason)
+                .HasMaxLength(500);
+
+            modelBuilder.Entity<Payment>()
+                .Property(payment => payment.RefundAmount)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Payment>()
+                .HasIndex(payment => payment.ProviderReference)
+                .IsUnique();
+
+            modelBuilder.Entity<Payment>()
+                .HasIndex(payment => new { payment.UserId, payment.CreatedAt });
+
+            modelBuilder.Entity<Payment>()
+                .HasIndex(payment => payment.PurchaseId)
+                .IsUnique()
+                .HasFilter("[PurchaseId] IS NOT NULL");
+
+            modelBuilder.Entity<Payment>()
+                .HasOne(payment => payment.User)
+                .WithMany()
+                .HasForeignKey(payment => payment.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Payment>()
+                .HasOne(payment => payment.Purchase)
+                .WithOne(purchase => purchase.Payment)
+                .HasForeignKey<Payment>(payment => payment.PurchaseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PaymentItem>()
+                .Property(item => item.GameName)
+                .HasMaxLength(200);
+
+            modelBuilder.Entity<PaymentItem>()
+                .Property(item => item.OriginalPrice)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<PaymentItem>()
+                .Property(item => item.Price)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<PaymentItem>()
+                .HasOne(item => item.Payment)
+                .WithMany(payment => payment.Items)
+                .HasForeignKey(item => item.PaymentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PaymentEvent>()
+                .Property(paymentEvent => paymentEvent.ProviderEventId)
+                .HasMaxLength(160);
+
+            modelBuilder.Entity<PaymentEvent>()
+                .Property(paymentEvent => paymentEvent.EventType)
+                .HasMaxLength(32);
+
+            modelBuilder.Entity<PaymentEvent>()
+                .HasIndex(paymentEvent => paymentEvent.ProviderEventId)
+                .IsUnique();
+
+            modelBuilder.Entity<PaymentEvent>()
+                .HasIndex(paymentEvent => new { paymentEvent.PaymentId, paymentEvent.ReceivedAt });
+
+            modelBuilder.Entity<PaymentEvent>()
+                .HasOne(paymentEvent => paymentEvent.Payment)
+                .WithMany(payment => payment.Events)
+                .HasForeignKey(paymentEvent => paymentEvent.PaymentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
 
         }
     }

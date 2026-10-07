@@ -14,6 +14,7 @@ public sealed class ServiceRegistry
         LibraryService = new LibraryService(ApiClient);
         WishlistService = new WishlistService(ApiClient);
         CartService = new CartService(ApiClient);
+        PaymentService = new PaymentService(ApiClient);
         ReviewsService = new ReviewsService(ApiClient);
         InstallationService = new InstallationService(ApiClient, settings);
     }
@@ -26,6 +27,7 @@ public sealed class ServiceRegistry
     public LibraryService LibraryService { get; }
     public WishlistService WishlistService { get; }
     public CartService CartService { get; }
+    public PaymentService PaymentService { get; }
     public ReviewsService ReviewsService { get; }
     public InstallationService InstallationService { get; }
 }

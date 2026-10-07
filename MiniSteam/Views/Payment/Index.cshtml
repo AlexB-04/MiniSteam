@@ -1,0 +1,85 @@
+@model IReadOnlyList<MiniSteam.Models.ViewModels.PaymentDetailsViewModel>
+
+@{
+    ViewData["Title"] = "Payment History";
+}
+
+<div class="purchase-page-v2">
+    <div class="purchase-v2-header">
+        <div>
+            <span class="purchase-eyebrow">COMMERCE</span>
+            <h1>Payment History</h1>
+            <p>Pending, succeeded, failed and refunded sandbox payments are kept as an audit trail.</p>
+        </div>
+        <a asp-controller="Cart" asp-action="Index" class="purchase-store-button">Open Cart</a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="purchase-empty-v2">
+            <div class="purchase-empty-icon">€</div>
+            <span class="purchase-empty-label">PAYMENT HISTORY</span>
+            <h2>No payment attempts yet</h2>
+            <p>Your MiniSteam sandbox checkout records will appear here.</p>
+        </div>
+    }
+    else
+    {
+        <section class="purchase-history-section">
+            <div class="purchase-section-header">
+                <div>
+                    <span class="purchase-section-eyebrow">PAYMENT AUDIT TRAIL</span>
+                    <h2>Your Payments</h2>
+                </div>
+                <span class="purchase-section-count">@Model.Count records</span>
+            </div>
+
+            <div class="purchase-list">
+                @foreach (var payment in Model)
+                {
+                    <article class="purchase-card purchase-card-v2">
+                        <div class="purchase-card-header purchase-card-header-v2">
+                            <div class="purchase-transaction-info">
+                                <div class="purchase-transaction-icon">€</div>
+                                <div>
+                                    <span class="purchase-transaction-label">@payment.Status.ToUpperInvariant()</span>
+                                    <strong>Payment #@payment.Id</strong>
+                                    <span class="purchase-transaction-date">@payment.CreatedAt.ToString("dd MMM yyyy · HH:mm")</span>
+                                </div>
+                            </div>
+                            <div class="purchase-transaction-total">
+                                <span>@payment.Currency</span>
+                                <strong>@payment.Total.ToString("0.00")</strong>
+                            </div>
+                        </div>
+
+                        <div class="purchase-items">
+                            @foreach (var item in payment.Items)
+                            {
+                                <div class="purchase-item purchase-item-v2">
+                                    <div class="purchase-game-info">
+                                        <strong>@item.GameName</strong>
+                                        @if (item.HasDiscountSnapshot)
+                                        {
+                                            <small><s>@item.OriginalPrice.Value.ToString("0.00")</s> · -@item.DiscountPercent% snapshot</small>
+                                        }
+                                        else
+                                        {
+                                            <small>Checkout snapshot</small>
+                                        }
+                                    </div>
+                                    <div class="purchase-item-price">@item.Price.ToString("0.00") @payment.Currency</div>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="purchase-card-footer">
+                            <span>@(payment.ReceiptNumber ?? "No receipt issued")</span>
+                            <a asp-action="Details" asp-route-id="@payment.Id">Open payment / receipt</a>
+                        </div>
+                    </article>
+                }
+            </div>
+        </section>
+    }
+</div>

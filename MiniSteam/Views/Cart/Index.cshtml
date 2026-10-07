@@ -29,6 +29,7 @@
                 <span>@(itemCount == 1 ? "game" : "games")</span>
             </div>
 
+            <a asp-controller="Payment" asp-action="Index" class="cart-store-button">Payment History</a>
             <a asp-controller="Games" asp-action="Store" class="cart-store-button">Continue Shopping</a>
         </div>
     </div>
@@ -103,12 +104,19 @@
                                     <strong>@item.Price.ToString("0.00") €</strong>
                                 }
 
-                                <form asp-controller="Cart"
-                                      asp-action="Remove"
-                                      asp-route-gameId="@item.GameId"
-                                      method="post">
-                                    <button type="submit" class="cart-remove-button">Remove</button>
-                                </form>
+                                @if (Model.HasPendingPayment)
+                                {
+                                    <button type="button" class="cart-remove-button" disabled>Locked during payment</button>
+                                }
+                                else
+                                {
+                                    <form asp-controller="Cart"
+                                          asp-action="Remove"
+                                          asp-route-gameId="@item.GameId"
+                                          method="post">
+                                        <button type="submit" class="cart-remove-button">Remove</button>
+                                    </form>
+                                }
                             </div>
                         </article>
                     }
@@ -129,7 +137,18 @@
                     <strong>@Model.TotalPrice.ToString("0.00") €</strong>
                 </div>
 
-                @if (hasUnavailableItems)
+                @if (Model.HasPendingPayment)
+                {
+                    <div class="cart-unavailable-notice">
+                        Payment #@Model.PendingPaymentId is pending. The cart is locked until it succeeds or is declined.
+                    </div>
+                    <a asp-controller="Payment"
+                       asp-action="Details"
+                       asp-route-id="@Model.PendingPaymentId"
+                       class="cart-checkout-button"
+                       style="display:block; text-align:center;">Continue Pending Payment</a>
+                }
+                else if (hasUnavailableItems)
                 {
                     <div class="cart-unavailable-notice">
                         Remove Coming Soon items before checkout.
@@ -139,12 +158,12 @@
                 else
                 {
                     <form asp-controller="Cart" asp-action="Checkout" method="post">
-                        <button type="submit" class="cart-checkout-button">Purchase for myself</button>
+                        <button type="submit" class="cart-checkout-button">Proceed to Sandbox Payment</button>
                     </form>
                 }
 
                 <p class="cart-summary-note">
-                    MiniSteam is an educational project. No real payment is processed.
+                    MiniSteam v3.5.1 keeps a sandbox payment audit trail with receipts and refund testing. No real card or bank data is processed.
                 </p>
             </aside>
         </div>

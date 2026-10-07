@@ -46,11 +46,4 @@ public sealed class CartService
             cancellationToken: cancellationToken);
     }
 
-    public Task<PurchaseDto> CheckoutAsync(CancellationToken cancellationToken = default)
-    {
-        return _apiClient.PostAsync<PurchaseDto>(
-            "api/cart/checkout",
-            authenticated: true,
-            cancellationToken: cancellationToken);
-    }
 }

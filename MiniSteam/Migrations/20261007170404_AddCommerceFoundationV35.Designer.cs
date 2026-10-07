@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MiniSteam.Data;
 
@@ -11,9 +12,11 @@ using MiniSteam.Data;
 namespace MiniSteam.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20261007170404_AddCommerceFoundationV35")]
+    partial class AddCommerceFoundationV35
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -423,18 +426,6 @@ namespace MiniSteam.Migrations
                     b.Property<int?>("PurchaseId")
                         .HasColumnType("int");
 
-                    b.Property<decimal?>("RefundAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("RefundReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("RefundReference")
-                        .HasMaxLength(160)
-                        .HasColumnType("nvarchar(160)");
-
                     b.Property<DateTime?>("RefundedAt")
                         .HasColumnType("datetime2");
 
@@ -450,10 +441,6 @@ namespace MiniSteam.Migrations
                     b.Property<decimal>("TaxAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("TaxRate")
-                        .HasPrecision(8, 6)
-                        .HasColumnType("decimal(8,6)");
 
                     b.Property<decimal>("Total")
                         .HasPrecision(18, 2)
@@ -480,40 +467,6 @@ namespace MiniSteam.Migrations
                     b.ToTable("Payments");
                 });
 
-            modelBuilder.Entity("MiniSteam.Models.Entities.PaymentEvent", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("EventType")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<int>("PaymentId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ProviderEventId")
-                        .IsRequired()
-                        .HasMaxLength(160)
-                        .HasColumnType("nvarchar(160)");
-
-                    b.Property<DateTime>("ReceivedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProviderEventId")
-                        .IsUnique();
-
-                    b.HasIndex("PaymentId", "ReceivedAt");
-
-                    b.ToTable("PaymentEvents");
-                });
-
             modelBuilder.Entity("MiniSteam.Models.Entities.PaymentItem", b =>
                 {
                     b.Property<int>("Id")
@@ -522,9 +475,6 @@ namespace MiniSteam.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("DiscountPercent")
-                        .HasColumnType("int");
-
                     b.Property<int>("GameId")
                         .HasColumnType("int");
 
@@ -532,10 +482,6 @@ namespace MiniSteam.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
-
-                    b.Property<decimal?>("OriginalPrice")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("PaymentId")
                         .HasColumnType("int");
@@ -978,7 +924,7 @@ namespace MiniSteam.Migrations
             modelBuilder.Entity("MiniSteam.Models.Entities.Payment", b =>
                 {
                     b.HasOne("MiniSteam.Models.Entities.Purchase", "Purchase")
-                        .WithOne("Payment")
+                        .WithOne()
                         .HasForeignKey("MiniSteam.Models.Entities.Payment", "PurchaseId")
                         .OnDelete(DeleteBehavior.Restrict);
 
@@ -991,17 +937,6 @@ namespace MiniSteam.Migrations
                     b.Navigation("Purchase");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("MiniSteam.Models.Entities.PaymentEvent", b =>
-                {
-                    b.HasOne("MiniSteam.Models.Entities.Payment", "Payment")
-                        .WithMany("Events")
-                        .HasForeignKey("PaymentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Payment");
                 });
 
             modelBuilder.Entity("MiniSteam.Models.Entities.PaymentItem", b =>
@@ -1127,15 +1062,11 @@ namespace MiniSteam.Migrations
 
             modelBuilder.Entity("MiniSteam.Models.Entities.Payment", b =>
                 {
-                    b.Navigation("Events");
-
                     b.Navigation("Items");
                 });
 
             modelBuilder.Entity("MiniSteam.Models.Entities.Purchase", b =>
                 {
-                    b.Navigation("Payment");
-
                     b.Navigation("PurchaseItems");
                 });
 

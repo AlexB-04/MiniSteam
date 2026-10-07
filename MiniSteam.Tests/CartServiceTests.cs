@@ -137,4 +137,40 @@ public class CartServiceTests
         Assert.Empty(context.CartItems);
     }
 
+
+    [Fact]
+    public async Task RemoveAsync_BlocksCartChangesWhilePaymentIsPending()
+    {
+        await using var context = TestDataContextFactory.Create();
+        var game = new Game
+        {
+            Name = "Locked Cart Game",
+            Developer = "Test Studio",
+            ReleaseDate = DateTime.UtcNow,
+            IsPublic = true,
+            Price = 10m
+        };
+
+        context.Games.Add(game);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        context.CartItems.Add(new CartItem { UserId = "user-1", GameId = game.Id });
+        context.Payments.Add(new Payment
+        {
+            UserId = "user-1",
+            Status = PaymentStatus.Pending,
+            Provider = "MiniSteam Sandbox",
+            ProviderReference = "sandbox_test",
+            Currency = "EUR",
+            Subtotal = 10m,
+            Total = 10m
+        });
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var service = new CartService(context);
+        var result = await service.RemoveAsync("user-1", game.Id);
+
+        Assert.Equal(ServiceResultStatus.Conflict, result.Status);
+        Assert.Single(context.CartItems);
+    }
+
 }

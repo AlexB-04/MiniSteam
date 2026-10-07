@@ -1,4 +1,4 @@
-﻿namespace MiniSteam.Models.Entities
+namespace MiniSteam.Models.Entities
 {
     public class Purchase
     {
@@ -12,5 +12,7 @@
         public decimal TotalPrice { get; set; }
 
         public ICollection<PurchaseItem> PurchaseItems { get; set; } = new List<PurchaseItem>();
+
+        public Payment? Payment { get; set; }
     }
 }

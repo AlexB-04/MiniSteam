@@ -15,14 +15,10 @@ namespace MiniSteam.Controllers.API
     public class CartController : ControllerBase
     {
         private readonly ICartService _cartService;
-        private readonly IPurchaseService _purchaseService;
 
-        public CartController(
-            ICartService cartService,
-            IPurchaseService purchaseService)
+        public CartController(ICartService cartService)
         {
             _cartService = cartService;
-            _purchaseService = purchaseService;
         }
 
         [HttpGet]
@@ -95,30 +91,6 @@ namespace MiniSteam.Controllers.API
             return Ok(new { message = "Game removed from cart." });
         }
 
-        [HttpPost("checkout")]
-        public async Task<IActionResult> CheckoutCart()
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                return Unauthorized();
-            }
-
-            var result = await _purchaseService.CheckoutCartAsync(
-                userId,
-                User.IsInRole("Admin"));
-
-            if (!result.Succeeded || result.Value == null)
-            {
-                return this.FromServiceFailure(
-                    result,
-                    "Checkout could not be completed.");
-            }
-
-            return Ok(ToPurchaseDto(result.Value));
-        }
-
         private static CartItemDto ToDto(CartItem cartItem)
         {
             return new CartItemDto
@@ -136,22 +108,5 @@ namespace MiniSteam.Controllers.API
             };
         }
 
-        private static PurchaseDto ToPurchaseDto(Purchase purchase)
-        {
-            return new PurchaseDto
-            {
-                Id = purchase.Id,
-                PurchasedAt = purchase.PurchasedAt,
-                TotalPrice = purchase.TotalPrice,
-                Items = purchase.PurchaseItems
-                    .Select(item => new PurchaseItemDto
-                    {
-                        GameId = item.GameId,
-                        GameName = item.Game.Name,
-                        Price = item.Price
-                    })
-                    .ToList()
-            };
-        }
     }
 }
